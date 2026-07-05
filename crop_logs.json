@@ -1,120 +1,170 @@
 {
-  "location": {
+  "Profile": {
     "country": "Ecuador",
     "province": "Manabi",
     "canton": "El Carmen",
     "latitude": -0.2687,
-    "longitude": -79.4326
+    "longitude": -79.4326,
+    "farmer_name": "Demo Farmer",
+    "farm_name": "Finca Demo",
+    "total_hectares": 10.0
   },
-  "grid": [
-    {
-      "parcel_id": "P1",
-      "crop": "Cacao",
-      "status": "Healthy",
-      "neighbor_parcels": [
-        "P2"
-      ]
-    },
-    {
-      "parcel_id": "P2",
-      "crop": "Banana",
-      "status": "Healthy",
-      "neighbor_parcels": [
-        "P1",
-        "P3"
-      ]
-    },
-    {
-      "parcel_id": "P3",
-      "crop": "Corn",
-      "status": "Dry/Needs Water",
-      "neighbor_parcels": [
-        "P2"
-      ]
-    }
-  ],
-  "crop_plan": [
+  "FarmGrid": {
+    "rows": 3,
+    "cols": 2,
+    "parcels": [
+      {
+        "id": "P1",
+        "crop": "Cacao",
+        "status": "Healthy",
+        "area_ha": 1.0
+      },
+      {
+        "id": "P2",
+        "crop": "Banana",
+        "status": "Healthy",
+        "area_ha": 1.0
+      },
+      {
+        "id": "P3",
+        "crop": "Corn",
+        "status": "Dry/Needs Water",
+        "area_ha": 1.0
+      }
+    ]
+  },
+  "CropPlan": [
     {
       "date": "2026-07-10",
       "parcel": "P1",
-      "activity": "Pruning cacao trees"
+      "activity": "Pruning cacao trees",
+      "status": "Pending"
     },
     {
       "date": "2026-07-15",
       "parcel": "P2",
-      "activity": "Inspect banana leaves for Sigatoka"
+      "activity": "Inspect banana leaves for Sigatoka",
+      "status": "Pending"
     },
     {
       "date": "2026-08-15",
       "parcel": "P3",
-      "activity": "Harvest corn and clear land"
+      "activity": "Harvest corn and clear land",
+      "status": "Pending"
     },
     {
       "date": "2026-11-15",
       "parcel": "P1",
-      "activity": "Main Cacao Harvest starts"
+      "activity": "Main Cacao Harvest starts",
+      "status": "Pending"
     },
     {
       "date": "2027-01-05",
       "parcel": "P3",
-      "activity": "Plant corn for winter rainy cycle"
+      "activity": "Plant corn for winter rainy cycle",
+      "status": "Pending"
     },
     {
       "date": "2026-07-06",
       "parcel": "P3",
-      "activity": "Urgent irrigation of dry corn"
+      "activity": "Urgent irrigation of dry corn",
+      "status": "Pending"
     },
     {
       "date": "2026-07-06",
       "parcel": "P3",
-      "activity": "Urgent irrigation"
+      "activity": "Urgent irrigation",
+      "status": "Pending"
     },
     {
       "date": "2026-07-06",
       "parcel": "P3",
-      "activity": "Urgent irrigation to save dry corn"
+      "activity": "Urgent irrigation to save dry corn",
+      "status": "Pending"
     },
     {
       "date": "2026-07-10",
       "parcel": "P1",
-      "activity": "Pruning cacao trees for disease prevention"
+      "activity": "Pruning cacao trees for disease prevention",
+      "status": "Pending"
     },
     {
       "date": "2026-07-15",
       "parcel": "P2",
-      "activity": "Leaf inspection for Black Sigatoka"
+      "activity": "Leaf inspection for Black Sigatoka",
+      "status": "Pending"
     },
     {
       "date": "2026-08-15",
       "parcel": "P3",
-      "activity": "Harvest corn and clear dry crop residue"
+      "activity": "Harvest corn and clear dry crop residue",
+      "status": "Pending"
     },
     {
       "date": "2026-11-15",
       "parcel": "P1",
-      "activity": "Main Cacao Harvest begins"
+      "activity": "Main Cacao Harvest begins",
+      "status": "Pending"
     },
     {
       "date": "2027-01-05",
       "parcel": "P3",
-      "activity": "Plant winter corn to utilize rainy season"
+      "activity": "Plant winter corn to utilize rainy season",
+      "status": "Pending"
     }
   ],
-  "pending_actions": [
+  "Indicators": [
     {
-      "parcel": "P3",
-      "action": "Urgent irrigation of dry corn",
-      "due_date": "2026-07-06"
+      "parcel": "A1",
+      "health_status": "Healthy",
+      "last_inspection": "2026-07-01",
+      "pending_action": "None"
     },
     {
-      "parcel": "P1",
-      "action": "Pruning cacao trees",
-      "due_date": "2026-07-10"
+      "parcel": "A2",
+      "health_status": "Healthy",
+      "last_inspection": "2026-07-01",
+      "pending_action": "None"
     },
     {
-      "parcel": "P2",
-      "action": "Inspect banana leaves for Sigatoka",
-      "due_date": "2026-07-15"
+      "parcel": "B1",
+      "health_status": "Water Stress",
+      "last_inspection": "2026-07-01",
+      "pending_action": "Irrigate immediately"
+    },
+    {
+      "parcel": "B2",
+      "health_status": "Healthy",
+      "last_inspection": "2026-07-01",
+      "pending_action": "None"
+    },
+    {
+      "parcel": "C1",
+      "health_status": "Healthy",
+      "last_inspection": "2026-07-01",
+      "pending_action": "None"
+    },
+    {
+      "parcel": "C2",
+      "health_status": "Nutrient Deficiency",
+      "last_inspection": "2026-07-01",
+      "pending_action": "Apply NPK 15-15-15"
+    }
+  ],
+  "InteractionLog": [
+    {
+      "parcel": "Corn",
+      "mode": "Mode 1 — GENERAL_QUESTION",
+      "diagnosis": "Based on your latest farm data, your cacao in Parcel 1 (P1) and your bananas in Parcel 2 (P2) are currently healthy. However, your corn in Parcel 3 (P3) is suffering from severe dry conditions and urg",
+      "recommendation": "To save your corn and ensure your other crops remain healthy, please follow this schedule:",
+      "date": "2026-07-04 21:20"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "Our records show that your corn crop in **Parcel 3 (P3)** is dry and suffering from severe water stress. Thankfully, your cacao trees in **Parcel 1 (P1)** and bananas in **Parcel 2 (P2)** are currentl",
+      "recommendation": "Here is your step-by-step action plan to save your crops and prepare for a successful harvest:",
+      "date": "2026-07-04 21:21"
     }
   ]
 }
