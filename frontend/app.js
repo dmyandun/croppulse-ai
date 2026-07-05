@@ -379,30 +379,51 @@ function initStep1() {
     kEl.addEventListener('change', chk);
     nxt.addEventListener('click', () => {
         if (nxt.disabled) return;
-
-        let sheetId = '';
-        if (dbMode === 'sheets' && inputSheetId.value.trim()) {
-            const rawVal = inputSheetId.value.trim();
-            const urlMatch = rawVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-            sheetId = urlMatch ? urlMatch[1] : rawVal;
-        }
-
         APP.profile = {
             country:       cEl.value,
             country_label: cEl.options[cEl.selectedIndex].text,
             province:      pEl.value,
             canton:        kEl.value,
-            sheet_id:      sheetId,
+            sheet_id:      '',
         };
         goToStep2();
+    });
+
+    // Step 2 (Sheets sync) → Next button
+    document.getElementById('ob-next-btn-sheets')?.addEventListener('click', () => {
+        let sheetId = '';
+        if (dbMode === 'sheets' && inputSheetId && inputSheetId.value.trim()) {
+            const rawVal = inputSheetId.value.trim();
+            const urlMatch = rawVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            sheetId = urlMatch ? urlMatch[1] : rawVal;
+        }
+        APP.profile.sheet_id = sheetId;
+        goToStep3();
+    });
+
+    // Step 2 (Sheets sync) → Back button
+    document.getElementById('ob-back-btn-sheets')?.addEventListener('click', () => {
+        document.getElementById('ob-step-2').style.display='none';
+        document.getElementById('ob-step-1').style.display='block';
+        document.getElementById('dot-1').classList.add('active');
+        document.getElementById('dot-2').classList.remove('active');
     });
 }
 
 function goToStep2() {
     document.getElementById('ob-step-1').style.display='none';
     document.getElementById('ob-step-2').style.display='block';
+    document.getElementById('ob-step-3').style.display='none';
     document.getElementById('dot-1').classList.remove('active');
     document.getElementById('dot-2').classList.add('active');
+    document.getElementById('dot-3').classList.remove('active');
+}
+
+function goToStep3() {
+    document.getElementById('ob-step-2').style.display='none';
+    document.getElementById('ob-step-3').style.display='block';
+    document.getElementById('dot-2').classList.remove('active');
+    document.getElementById('dot-3').classList.add('active');
     renderObGrid();
 }
 
@@ -508,10 +529,11 @@ function initStep2() {
         document.getElementById(`ob-${dim}`).addEventListener('change',renderObGrid);
     });
     document.getElementById('ob-back-btn').addEventListener('click',()=>{
-        document.getElementById('ob-step-2').style.display='none';
-        document.getElementById('ob-step-1').style.display='block';
-        document.getElementById('dot-1').classList.add('active');
-        document.getElementById('dot-2').classList.remove('active');
+        // Parcels step (3) → back to Sheets step (2).
+        document.getElementById('ob-step-3').style.display='none';
+        document.getElementById('ob-step-2').style.display='block';
+        document.getElementById('dot-2').classList.add('active');
+        document.getElementById('dot-3').classList.remove('active');
     });
     document.getElementById('ob-crop-modal-close').addEventListener('click',closeObModal);
     document.getElementById('ob-crop-details-close').addEventListener('click',closeObModal);

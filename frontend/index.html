@@ -19,6 +19,7 @@
     <div class="ob-step-dots" aria-label="Step progress">
         <div class="ob-dot active" id="dot-1"></div>
         <div class="ob-dot" id="dot-2"></div>
+        <div class="ob-dot" id="dot-3"></div>
     </div>
 
     <!-- STEP 1 – Location -->
@@ -70,25 +71,35 @@
                 <span id="ob-location-text"></span>
             </div>
 
-            <!-- Database Setup Option -->
-            <div class="ob-field" style="margin-top:1.25rem;">
-                <label class="ob-label"><i class="fa-solid fa-database"></i> Database Connection</label>
+        </div>
+        <button id="ob-next-btn" class="ob-btn ob-btn-primary" disabled>
+            Next <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- STEP 2 – Google Sheets sync (optional) -->
+    <div id="ob-step-2" class="ob-card" style="display:none">
+        <div class="ob-back-row">
+            <button id="ob-back-btn-sheets" class="ob-btn-ghost"><i class="fa-solid fa-arrow-left"></i> Back</button>
+        </div>
+        <h2 class="ob-title">Google Sheets sync</h2>
+        <p class="ob-subtitle">Optional — enables cross-device access to your farm profile.</p>
+        <div class="ob-form">
+            <div class="ob-field">
+                <label class="ob-label"><i class="fa-solid fa-database"></i> Storage mode</label>
                 <div style="display:flex;gap:0.5rem;margin-top:0.35rem;margin-bottom:0.75rem;">
                     <button type="button" id="ob-db-btn-local" class="ob-db-toggle-btn active" style="flex:1;padding:0.55rem;background:#3b82f6;border:1px solid #2563eb;border-radius:0.375rem;color:#ffffff;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                        Local DB (Mock)
+                        Local only (this device)
                     </button>
                     <button type="button" id="ob-db-btn-sheets" class="ob-db-toggle-btn" style="flex:1;padding:0.55rem;background:#1e293b;border:1px solid #334155;border-radius:0.375rem;color:#94a3b8;font-size:0.8rem;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                        Google Sheets Sync
+                        Google Sheets sync
                     </button>
                 </div>
             </div>
 
             <div id="ob-sheets-config-group" style="display:none;animation:fadeIn 0.2s ease-out;margin-bottom:1rem;">
                 <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);padding:0.85rem;border-radius:0.5rem;margin-bottom:0.75rem;">
-                    <p style="font-size:0.78rem;color:#cbd5e1;margin:0 0 0.4rem;line-height:1.5;">
-                        <strong style="color:#60a5fa;">Optional</strong> — CropPulse works fully without Sheets. Sync unlocks cross-device access to your farm profile.
-                    </p>
-                    <p style="font-size:0.75rem;color:#cbd5e1;margin:0.55rem 0 0.4rem;line-height:1.55;">
+                    <p style="font-size:0.75rem;color:#cbd5e1;margin:0 0 0.4rem;line-height:1.55;">
                         <strong>2 quick steps:</strong>
                     </p>
                     <ol style="margin:0;padding-left:1.15rem;font-size:0.75rem;color:#cbd5e1;line-height:1.55;">
@@ -111,18 +122,18 @@
                 </div>
             </div>
         </div>
-        <button id="ob-next-btn" class="ob-btn ob-btn-primary" disabled>
+        <button id="ob-next-btn-sheets" class="ob-btn ob-btn-primary">
             Next <i class="fa-solid fa-arrow-right"></i>
         </button>
     </div>
 
-    <!-- STEP 2 – Farm Grid -->
-    <div id="ob-step-2" class="ob-card" style="display:none">
+    <!-- STEP 3 – Farm Grid -->
+    <div id="ob-step-3" class="ob-card" style="display:none">
         <div class="ob-back-row">
             <button id="ob-back-btn" class="ob-btn-ghost"><i class="fa-solid fa-arrow-left"></i> Back</button>
         </div>
         <h2 class="ob-title">Define your parcels</h2>
-        <p class="ob-subtitle">Tap on each cell below to assign a crop (e.g., Cacao, Banana, Coffee). The AI Assistant uses this grid layout to customize its weather and disease advice for you!</p>
+        <p class="ob-subtitle">Tap on each cell below to assign a crop. The AI Assistant uses this grid layout to customize its advice for you.</p>
         <div class="ob-grid-controls">
             <div class="ob-size-group">
                 <label class="ob-label" for="ob-rows"><i class="fa-solid fa-table-rows"></i> Rows</label>
@@ -145,16 +156,6 @@
         <div class="ob-farm-grid-wrapper">
             <div id="ob-farm-grid" class="ob-farm-grid" role="grid" aria-label="Farm parcels"></div>
         </div>
-        <div class="ob-legend">
-            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#10b981"></span>Cacao</div>
-            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#f59e0b"></span>Banana</div>
-            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#f97316"></span>Coffee</div>
-            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#3b82f6"></span>Other</div>
-            <div class="ob-legend-item"><span class="ob-legend-dot ob-legend-empty"></span>Empty</div>
-        </div>
-        <p class="ob-grid-tip" style="font-size:0.85rem;color:#9ca3af;margin:-0.5rem 0 1rem;text-align:center;line-height:1.4;">
-            💡 <em>Make sure to assign at least one Cacao or Banana parcel to enable disease diagnostics and custom crop advisory!</em>
-        </p>
         <button id="ob-start-btn" class="ob-btn ob-btn-primary ob-btn-full">
             <i class="fa-solid fa-rocket"></i> Get started
         </button>
