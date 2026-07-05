@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CropPulse AI - Agricultural Decision Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-seedling brand-icon"></i>
+                <div class="brand-text">
+                    <h1>CropPulse<span>AI</span></h1>
+                    <p>Decision Studio</p>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#vision" class="nav-item" data-tab="vision">
+                    <i class="fa-solid fa-eye"></i>
+                    <span>Crop Vision</span>
+                </a>
+                <a href="#weather-market" class="nav-item" data-tab="weather-market">
+                    <i class="fa-solid fa-cloud-sun-rain"></i>
+                    <span>Weather & Markets</span>
+                </a>
+                <a href="#logs" class="nav-item" data-tab="logs">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Crop Logs Tracker</span>
+                </a>
+                <a href="#advisory" class="nav-item" data-tab="advisory">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Advisory Fusion</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <p>Powered by Gemini & ADK 2.0</p>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-title">
+                    <h2 id="tab-title">Workspace Dashboard</h2>
+                    <p id="tab-subtitle">Real-time agricultural decision metrics & alerts</p>
+                </div>
+                <div class="header-status">
+                    <div class="status-indicator online"></div>
+                    <span>System Connected</span>
+                </div>
+            </header>
+
+            <!-- Dashboard Tab -->
+            <section id="tab-dashboard" class="tab-pane active">
+                <div class="metrics-grid">
+                    <div class="metric-card glass">
+                        <div class="metric-header">
+                            <span>CURRENT WEATHER</span>
+                            <i class="fa-solid fa-cloud-sun sun-icon"></i>
+                        </div>
+                        <div class="metric-value" id="dash-weather">24.5°C</div>
+                        <div class="metric-sub">Mild breeze, Clear skies</div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-header">
+                            <span>MARKET PRICE (CORN)</span>
+                            <i class="fa-solid fa-chart-simple market-icon"></i>
+                        </div>
+                        <div class="metric-value" id="dash-price">$4.52 / bu</div>
+                        <div class="metric-sub status-up"><i class="fa-solid fa-caret-up"></i> +1.2% this morning</div>
+                    </div>
+                    <div class="metric-card glass">
+                        <div class="metric-header">
+                            <span>LOGGED ACTIONS</span>
+                            <i class="fa-solid fa-circle-check check-icon"></i>
+                        </div>
+                        <div class="metric-value" id="dash-logs">3 Active</div>
+                        <div class="metric-sub">Last updated 1 hour ago</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-panels">
+                    <div class="panel-left glass">
+                        <h3><i class="fa-solid fa-circle-exclamation"></i> Action Required Alert</h3>
+                        <p class="alert-desc">Nitrogen levels in Soybeans Block B are low. Weather forecast indicates light showers in 48 hours, presenting a perfect opportunity for fertilizer application.</p>
+                        <div class="panel-actions">
+                            <button class="btn btn-primary" onclick="switchTab('advisory')">Get Advisory Report</button>
+                        </div>
+                    </div>
+                    <div class="panel-right glass">
+                        <h3>Quick Navigation</h3>
+                        <div class="quick-links">
+                            <button class="quick-link" onclick="switchTab('vision')"><i class="fa-solid fa-camera"></i> Diagnose Leaf</button>
+                            <button class="quick-link" onclick="switchTab('weather-market')"><i class="fa-solid fa-dollar-sign"></i> Crop Ticker</button>
+                            <button class="quick-link" onclick="switchTab('logs')"><i class="fa-solid fa-plus"></i> Log Activity</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Crop Vision Tab -->
+            <section id="tab-vision" class="tab-pane">
+                <div class="vision-grid">
+                    <div class="vision-upload glass">
+                        <h3>Crop Image Diagnostic</h3>
+                        <p>Upload leaf, plant, or soil images for multimodal diagnostic analysis.</p>
+                        
+                        <div class="upload-zone" id="dropzone">
+                            <i class="fa-solid fa-image upload-icon"></i>
+                            <p>Drag & drop image here or click to browse</p>
+                            <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                            <img id="image-preview" src="" alt="Preview" style="display: none;">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="vision-mode">Select Analysis Mode</label>
+                            <select id="vision-mode" class="form-control">
+                                <option value="disease">Pest & Disease Detection</option>
+                                <option value="nutrient">Nutrient Deficiency Analysis</option>
+                                <option value="growth">Growth Stage Classification</option>
+                                <option value="soil">Soil Health Assessment</option>
+                                <option value="weed">Weed Detection</option>
+                                <option value="harvest">Harvest Readiness Check</option>
+                                <option value="general">General Crop Health Inspection</option>
+                            </select>
+                        </div>
+
+                        <button class="btn btn-primary btn-block" id="btn-analyze-vision" disabled>
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Run Diagnostic
+                        </button>
+                    </div>
+
+                    <div class="vision-results glass">
+                        <h3>Diagnostic Report</h3>
+                        <div class="result-placeholder" id="vision-placeholder">
+                            <i class="fa-solid fa-microscope placeholder-icon"></i>
+                            <p>Upload an image and run diagnostic to view results.</p>
+                        </div>
+                        <div class="result-content" id="vision-result" style="display: none;">
+                            <!-- Diagnostic text content gets streamed/injected here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Weather & Market Tab -->
+            <section id="tab-weather-market" class="tab-pane">
+                <div class="wm-grid">
+                    <div class="wm-inputs glass">
+                        <h3>Weather coordinates query</h3>
+                        <div class="coords-row">
+                            <div class="form-group">
+                                <label for="lat">Latitude</label>
+                                <input type="number" id="lat" class="form-control" value="37.7749" step="0.0001">
+                            </div>
+                            <div class="form-group">
+                                <label for="lng">Longitude</label>
+                                <input type="number" id="lng" class="form-control" value="-122.4194" step="0.0001">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-block" id="btn-fetch-weather">
+                            <i class="fa-solid fa-location-crosshairs"></i> Fetch Location Weather
+                        </button>
+
+                        <h3 style="margin-top: 2rem;">Commodity price ticker</h3>
+                        <div class="form-group">
+                            <label for="crop-commodity">Select Commodity</label>
+                            <select id="crop-commodity" class="form-control">
+                                <option value="corn">Corn</option>
+                                <option value="wheat">Wheat</option>
+                                <option value="soybeans">Soybeans</option>
+                                <option value="coffee">Coffee</option>
+                                <option value="cocoa">Cocoa</option>
+                                <option value="rice">Rice</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-block" id="btn-fetch-price">
+                            <i class="fa-solid fa-money-bill-trend-up"></i> Fetch Commodity Price
+                        </button>
+                    </div>
+
+                    <div class="wm-results glass">
+                        <h3>Real-time Feed</h3>
+                        <div class="result-placeholder" id="wm-placeholder">
+                            <i class="fa-solid fa-satellite-dish placeholder-icon"></i>
+                            <p>Run weather location query or crop ticker query to view real-time feed.</p>
+                        </div>
+                        <div class="result-content" id="wm-result" style="display: none;">
+                            <!-- Weather/Market outputs -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logs Tracker Tab -->
+            <section id="tab-logs" class="tab-pane">
+                <div class="logs-grid">
+                    <div class="logs-entry glass">
+                        <h3>Create Log Entry</h3>
+                        <div class="form-group">
+                            <label for="sheet-name">Select Sheet Target</label>
+                            <select id="sheet-name" class="form-control">
+                                <option value="crop_health">Crop Health Log</option>
+                                <option value="operations">Farm Operations</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="log-crop">Crop</label>
+                            <input type="text" id="log-crop" class="form-control" placeholder="e.g. Corn, Soybeans">
+                        </div>
+                        <div class="form-group">
+                            <label for="log-status">Status / Action</label>
+                            <input type="text" id="log-status" class="form-control" placeholder="e.g. Healthy, Fertilized">
+                        </div>
+                        <div class="form-group">
+                            <label for="log-notes">Details / Notes</label>
+                            <textarea id="log-notes" class="form-control" rows="4" placeholder="Detailed operation notes..."></textarea>
+                        </div>
+                        <button class="btn btn-primary btn-block" id="btn-write-log">
+                            <i class="fa-solid fa-file-pen"></i> Submit Log Entry
+                        </button>
+                    </div>
+
+                    <div class="logs-list glass">
+                        <div class="logs-list-header">
+                            <h3>Logged Actions Tracker</h3>
+                            <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">
+                                <i class="fa-solid fa-rotate"></i> Refresh Logs
+                            </button>
+                        </div>
+                        <div class="logs-container" id="logs-container">
+                            <!-- Logs dynamically loaded -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Advisory Tab -->
+            <section id="tab-advisory" class="tab-pane">
+                <div class="advisory-layout glass">
+                    <div class="advisory-header">
+                        <div>
+                            <h3>Advisory Studio</h3>
+                            <p>Generate a 4-signal fusion recommendation report integrating crop state, weather models, market outlooks, and history.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-generate-advisory">
+                            <i class="fa-solid fa-compass-drafting"></i> Generate Fusion Report
+                        </button>
+                    </div>
+                    <div class="advisory-result" id="advisory-result">
+                        <div class="result-placeholder">
+                            <i class="fa-solid fa-brain placeholder-icon"></i>
+                            <p>Click "Generate Fusion Report" to construct agricultural recommendations.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
