@@ -130,6 +130,17 @@ def route_after_router(ctx: Context, node_input: str) -> Event:
         return Event(output=router_text, actions=EventActions(route="advisory"))
 
 
+def dispatch_advisory_signals(ctx: Context, node_input: str) -> str:
+    """Fan-out anchor for the text-only advisory branch.
+
+    The vision branch fans out to weather + market via edges from `vision_agent`.
+    Text-only questions skip vision, so without this passthrough the weather and
+    market MCP nodes would never fire and the Advisory Agent would receive
+    "No weather data retrieved." / "No market price data retrieved."
+    """
+    return node_input or ""
+
+
 def compile_advisory_input(ctx: Context, node_input: str) -> str:
     """Consolidate Vision, Weather, Markets, and Sheets inputs into a single prompt for Advisory."""
     # Stash incoming data into state keyed by signal type
@@ -203,11 +214,15 @@ root_workflow = Workflow(
         # Route options from Router branch
         (
             route_after_router,
-            {"vision": vision_agent, "advisory": compile_advisory_input},
+            {"vision": vision_agent, "advisory": dispatch_advisory_signals},
         ),
-        # Fan-out from vision agent
+        # Fan-out from vision agent (image-bearing intents)
         (vision_agent, weather_node),
         (vision_agent, market_node),
+        # Fan-out from dispatch (text-only intents) — mirrors vision_agent so
+        # weather and market signals always reach the Advisory Agent
+        (dispatch_advisory_signals, weather_node),
+        (dispatch_advisory_signals, market_node),
         # Fan-in from parallel nodes to advisory compile
         (weather_node, compile_advisory_input),
         (market_node, compile_advisory_input),

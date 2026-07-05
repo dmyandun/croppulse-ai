@@ -37,7 +37,7 @@ app = get_fast_api_app(
 # Unregister default ADK /run route to allow our custom legacy_run route override
 app.router.routes = [r for r in app.router.routes if r.path != "/run"]
 
-BUILD_ID = "build_20260705_1400"
+BUILD_ID = "build_20260705_1500"
 
 
 @app.get("/version")
