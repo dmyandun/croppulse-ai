@@ -81,7 +81,7 @@
             <button id="ob-back-btn" class="ob-btn-ghost"><i class="fa-solid fa-arrow-left"></i> Back</button>
         </div>
         <h2 class="ob-title">Define your parcels</h2>
-        <p class="ob-subtitle">Tap each cell to assign a crop</p>
+        <p class="ob-subtitle">Tap on each cell below to assign a crop (e.g., Cacao, Banana, Coffee). The AI Assistant uses this grid layout to customize its weather and disease advice for you!</p>
         <div class="ob-grid-controls">
             <div class="ob-size-group">
                 <label class="ob-label" for="ob-rows"><i class="fa-solid fa-table-rows"></i> Rows</label>
@@ -111,6 +111,9 @@
             <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#3b82f6"></span>Other</div>
             <div class="ob-legend-item"><span class="ob-legend-dot ob-legend-empty"></span>Empty</div>
         </div>
+        <p class="ob-grid-tip" style="font-size:0.85rem;color:#9ca3af;margin:-0.5rem 0 1rem;text-align:center;line-height:1.4;">
+            💡 <em>Make sure to assign at least one Cacao or Banana parcel to enable disease diagnostics and custom crop advisory!</em>
+        </p>
         <button id="ob-start-btn" class="ob-btn ob-btn-primary ob-btn-full">
             <i class="fa-solid fa-rocket"></i> Get started
         </button>
@@ -142,10 +145,16 @@
             <i class="fa-solid fa-seedling"></i>
             <span>CropPulse<strong>AI</strong></span>
         </div>
-        <button id="topbar-location" class="topbar-location" aria-label="Farm location">
-            <i class="fa-solid fa-location-dot"></i>
-            <span id="topbar-location-text">Loading…</span>
-        </button>
+        <div class="topbar-actions" style="display:flex;gap:0.5rem;align-items:center;">
+            <button id="topbar-location" class="topbar-location" aria-label="Farm location">
+                <i class="fa-solid fa-location-dot"></i>
+                <span id="topbar-location-text">Loading…</span>
+            </button>
+            <button id="topbar-db-status" class="topbar-db-status" aria-label="Database status" style="display:flex;align-items:center;gap:0.35rem;background:rgba(245,158,11,0.15);color:#f59e0b;border:none;padding:0.35rem 0.65rem;border-radius:0.375rem;font-size:0.8rem;font-weight:600;cursor:pointer;">
+                <i class="fa-solid fa-database"></i>
+                <span id="db-status-text">Local DB</span>
+            </button>
+        </div>
     </header>
 
     <!-- Tab Bar -->
@@ -319,6 +328,25 @@
 
     </div><!-- /tab-views -->
 </div><!-- /main-app -->
+
+<!-- Google Sheets / Database Configuration Modal -->
+<div id="db-config-modal" class="ob-crop-modal" style="display:none" role="dialog" aria-label="Database settings">
+    <div class="ob-crop-modal-inner" style="max-width:380px;background:#1e293b;border:1px solid #334155;border-radius:0.75rem;padding:1.5rem;box-shadow:0 10px 25px rgba(0,0,0,0.3);color:#f8fafc;">
+        <div class="ob-crop-modal-header" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:0.75rem;margin-bottom:1rem;">
+            <span style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;"><i class="fa-solid fa-database" style="color:#f59e0b;"></i> Database Status</span>
+            <button id="db-config-close" class="ob-modal-close" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;" aria-label="Close">&times;</button>
+        </div>
+        <p style="font-size:0.9rem;color:#cbd5e1;line-height:1.5;margin-bottom:1rem;">
+            CropPulse AI is currently operating in <strong>Local JSON Fallback mode</strong> (mocking real-time DB via <code>crop_logs.json</code>).
+        </p>
+        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
+            <p style="font-size:0.8rem;color:#f59e0b;margin:0;line-height:1.4;">
+                To enable live cloud sync to your <strong>Google Sheets</strong>, set the <code>GOOGLE_SHEETS_CREDENTIALS</code> environment variable in your <code>.env</code> file with your Google Cloud Service Account JSON credentials.
+            </p>
+        </div>
+        <button id="db-config-btn-ok" class="ob-btn ob-btn-primary ob-btn-full" style="width:100%;">Got it</button>
+    </div>
+</div>
 
 <script src="app.js"></script>
 </body>

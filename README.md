@@ -75,16 +75,15 @@ You can also use features from the [ADK](https://adk.dev/) CLI with `uv run adk`
 Edit your agent logic in `app/agent.py` and test with `agents-cli playground` - it auto-reloads on save.
 
 ## Deployment
-The agent has been successfully deployed to **Vertex AI Reasoning Engine** (Agent Engine) in Google Cloud.
 
-### Active Deployment Details
+### 1. Vertex AI Reasoning Engine (Backend API)
+The agent logic is deployed as a Vertex AI Reasoning Engine instance:
 * **GCP Project**: `primal-turbine-499903-m5`
 * **Region**: `us-central1`
 * **Resource Name**: `projects/459552199677/locations/us-central1/reasoningEngines/2728739920267968512`
 
-### Deployment Steps & Reproduction
+#### Deployment Steps & Reproduction
 Vertex AI Reasoning Engine limits deployment payload sizes to **8MB**. Since the local virtual environment (`.venv`) is larger, it must be temporarily moved out of the project directory during packaging:
-
 1. **Move Virtual Environment Out**:
    ```powershell
    Move-Item -Path "croppulse-ai\.venv" -Destination "croppulse-ai_venv"
@@ -97,6 +96,14 @@ Vertex AI Reasoning Engine limits deployment payload sizes to **8MB**. Since the
    ```powershell
    Move-Item -Path "croppulse-ai_venv" -Destination "croppulse-ai\.venv"
    ```
+
+### 2. Google Cloud Run (Full Web App & Frontend)
+The complete web app containing both the FastAPI backend and custom static UI is hosted on Cloud Run:
+* **Service URL**: [https://croppulse-ai-459552199677.us-central1.run.app](https://croppulse-ai-459552199677.us-central1.run.app)
+* **Re-deployment Command**:
+  ```powershell
+  gcloud run deploy croppulse-ai --source . --region=us-central1 --allow-unauthenticated --memory 1Gi --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=primal-turbine-499903-m5,GOOGLE_CLOUD_LOCATION=global"
+  ```
 
 ## Observability
 

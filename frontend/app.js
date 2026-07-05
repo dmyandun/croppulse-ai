@@ -1195,4 +1195,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const inp=document.getElementById('chat-input');
         sendBtn.disabled=!inp.value.trim();
     });
+
+    // ── Database Config Modal ───────────────────────────────
+    const dbStatusBtn = document.getElementById('topbar-db-status');
+    const dbModal = document.getElementById('db-config-modal');
+    const dbCloseBtn = document.getElementById('db-config-close');
+    const dbOkBtn = document.getElementById('db-config-btn-ok');
+
+    dbStatusBtn?.addEventListener('click', () => {
+        dbModal.style.display = 'flex';
+    });
+
+    const closeDbModal = () => {
+        dbModal.style.display = 'none';
+    };
+
+    dbCloseBtn?.addEventListener('click', closeDbModal);
+    dbOkBtn?.addEventListener('click', closeDbModal);
+    dbModal?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeDbModal();
+    });
 });
