@@ -165,6 +165,20 @@
       "diagnosis": "Our records show that your corn crop in **Parcel 3 (P3)** is dry and suffering from severe water stress. Thankfully, your cacao trees in **Parcel 1 (P1)** and bananas in **Parcel 2 (P2)** are currentl",
       "recommendation": "Here is your step-by-step action plan to save your crops and prepare for a successful harvest:",
       "date": "2026-07-04 21:21"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "* **Parcel P3 (also listed as B1 - Corn):** This field is suffering from water stress. The soil is dry, and the corn plants urgently need water to survive and reach harvest.\n* **Parcel C2:** This fiel",
+      "recommendation": "(Step-by-Step Plan)",
+      "date": "2026-07-04 21:21"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 9 — GENERAL_QUESTION",
+      "diagnosis": "Based on your farm records, your corn field on **Parcel P3** is suffering from severe water stress and is currently dry. On a positive note, your cacao trees on **Parcel P1** and your banana plants on",
+      "recommendation": "is needed to keep the soil moist and save the crop. Meanwhile, dry and warm conditions are ideal for pruning your cacao on Parcel P1 to prevent fungal diseases from developing later, and for keeping a",
+      "date": "2026-07-04 21:22"
     }
   ]
 }

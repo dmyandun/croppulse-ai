@@ -2,270 +2,446 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>CropPulse AI - Agricultural Decision Studio</title>
+    <meta name="description" content="CropPulse AI gives smallholder farmers cross-signal intelligence: crop vision, weather, and market data fused into actionable recommendations.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="brand">
-                <i class="fa-solid fa-seedling brand-icon"></i>
-                <div class="brand-text">
-                    <h1>CropPulse<span>AI</span></h1>
-                    <p>Decision Studio</p>
-                </div>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#vision" class="nav-item" data-tab="vision">
-                    <i class="fa-solid fa-eye"></i>
-                    <span>Crop Vision</span>
-                </a>
-                <a href="#weather-market" class="nav-item" data-tab="weather-market">
-                    <i class="fa-solid fa-cloud-sun-rain"></i>
-                    <span>Weather & Markets</span>
-                </a>
-                <a href="#logs" class="nav-item" data-tab="logs">
-                    <i class="fa-solid fa-list-check"></i>
-                    <span>Crop Logs Tracker</span>
-                </a>
-                <a href="#advisory" class="nav-item" data-tab="advisory">
-                    <i class="fa-solid fa-compass"></i>
-                    <span>Advisory Fusion</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <p>Powered by Gemini & ADK 2.0</p>
-            </div>
-        </aside>
 
-        <!-- Main Workspace -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="main-header">
-                <div class="header-title">
-                    <h2 id="tab-title">Workspace Dashboard</h2>
-                    <p id="tab-subtitle">Real-time agricultural decision metrics & alerts</p>
-                </div>
-                <div class="header-status">
-                    <div class="status-indicator online"></div>
-                    <span>System Connected</span>
-                </div>
-            </header>
+<!-- ═══════════════════════════════════════════════════════════════
+     ONBOARDING OVERLAY (shown only on first visit)
+═══════════════════════════════════════════════════════════════ -->
+<div id="onboarding-overlay" class="onboarding-overlay" aria-modal="true" role="dialog" aria-label="Farm setup">
 
-            <!-- Dashboard Tab -->
-            <section id="tab-dashboard" class="tab-pane active">
-                <div class="metrics-grid">
-                    <div class="metric-card glass">
-                        <div class="metric-header">
-                            <span>CURRENT WEATHER</span>
-                            <i class="fa-solid fa-cloud-sun sun-icon"></i>
-                        </div>
-                        <div class="metric-value" id="dash-weather">24.5°C</div>
-                        <div class="metric-sub">Mild breeze, Clear skies</div>
-                    </div>
-                    <div class="metric-card glass">
-                        <div class="metric-header">
-                            <span>MARKET PRICE (CORN)</span>
-                            <i class="fa-solid fa-chart-simple market-icon"></i>
-                        </div>
-                        <div class="metric-value" id="dash-price">$4.52 / bu</div>
-                        <div class="metric-sub status-up"><i class="fa-solid fa-caret-up"></i> +1.2% this morning</div>
-                    </div>
-                    <div class="metric-card glass">
-                        <div class="metric-header">
-                            <span>LOGGED ACTIONS</span>
-                            <i class="fa-solid fa-circle-check check-icon"></i>
-                        </div>
-                        <div class="metric-value" id="dash-logs">3 Active</div>
-                        <div class="metric-sub">Last updated 1 hour ago</div>
-                    </div>
-                </div>
-
-                <div class="dashboard-panels">
-                    <div class="panel-left glass">
-                        <h3><i class="fa-solid fa-circle-exclamation"></i> Action Required Alert</h3>
-                        <p class="alert-desc">Nitrogen levels in Soybeans Block B are low. Weather forecast indicates light showers in 48 hours, presenting a perfect opportunity for fertilizer application.</p>
-                        <div class="panel-actions">
-                            <button class="btn btn-primary" onclick="switchTab('advisory')">Get Advisory Report</button>
-                        </div>
-                    </div>
-                    <div class="panel-right glass">
-                        <h3>Quick Navigation</h3>
-                        <div class="quick-links">
-                            <button class="quick-link" onclick="switchTab('vision')"><i class="fa-solid fa-camera"></i> Diagnose Leaf</button>
-                            <button class="quick-link" onclick="switchTab('weather-market')"><i class="fa-solid fa-dollar-sign"></i> Crop Ticker</button>
-                            <button class="quick-link" onclick="switchTab('logs')"><i class="fa-solid fa-plus"></i> Log Activity</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Crop Vision Tab -->
-            <section id="tab-vision" class="tab-pane">
-                <div class="vision-grid">
-                    <div class="vision-upload glass">
-                        <h3>Crop Image Diagnostic</h3>
-                        <p>Upload leaf, plant, or soil images for multimodal diagnostic analysis.</p>
-                        
-                        <div class="upload-zone" id="dropzone">
-                            <i class="fa-solid fa-image upload-icon"></i>
-                            <p>Drag & drop image here or click to browse</p>
-                            <input type="file" id="image-upload" accept="image/*" style="display: none;">
-                            <img id="image-preview" src="" alt="Preview" style="display: none;">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="vision-mode">Select Analysis Mode</label>
-                            <select id="vision-mode" class="form-control">
-                                <option value="disease">Pest & Disease Detection</option>
-                                <option value="nutrient">Nutrient Deficiency Analysis</option>
-                                <option value="growth">Growth Stage Classification</option>
-                                <option value="soil">Soil Health Assessment</option>
-                                <option value="weed">Weed Detection</option>
-                                <option value="harvest">Harvest Readiness Check</option>
-                                <option value="general">General Crop Health Inspection</option>
-                            </select>
-                        </div>
-
-                        <button class="btn btn-primary btn-block" id="btn-analyze-vision" disabled>
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Run Diagnostic
-                        </button>
-                    </div>
-
-                    <div class="vision-results glass">
-                        <h3>Diagnostic Report</h3>
-                        <div class="result-placeholder" id="vision-placeholder">
-                            <i class="fa-solid fa-microscope placeholder-icon"></i>
-                            <p>Upload an image and run diagnostic to view results.</p>
-                        </div>
-                        <div class="result-content" id="vision-result" style="display: none;">
-                            <!-- Diagnostic text content gets streamed/injected here -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Weather & Market Tab -->
-            <section id="tab-weather-market" class="tab-pane">
-                <div class="wm-grid">
-                    <div class="wm-inputs glass">
-                        <h3>Weather coordinates query</h3>
-                        <div class="coords-row">
-                            <div class="form-group">
-                                <label for="lat">Latitude</label>
-                                <input type="number" id="lat" class="form-control" value="37.7749" step="0.0001">
-                            </div>
-                            <div class="form-group">
-                                <label for="lng">Longitude</label>
-                                <input type="number" id="lng" class="form-control" value="-122.4194" step="0.0001">
-                            </div>
-                        </div>
-                        <button class="btn btn-primary btn-block" id="btn-fetch-weather">
-                            <i class="fa-solid fa-location-crosshairs"></i> Fetch Location Weather
-                        </button>
-
-                        <h3 style="margin-top: 2rem;">Commodity price ticker</h3>
-                        <div class="form-group">
-                            <label for="crop-commodity">Select Commodity</label>
-                            <select id="crop-commodity" class="form-control">
-                                <option value="corn">Corn</option>
-                                <option value="wheat">Wheat</option>
-                                <option value="soybeans">Soybeans</option>
-                                <option value="coffee">Coffee</option>
-                                <option value="cocoa">Cocoa</option>
-                                <option value="rice">Rice</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary btn-block" id="btn-fetch-price">
-                            <i class="fa-solid fa-money-bill-trend-up"></i> Fetch Commodity Price
-                        </button>
-                    </div>
-
-                    <div class="wm-results glass">
-                        <h3>Real-time Feed</h3>
-                        <div class="result-placeholder" id="wm-placeholder">
-                            <i class="fa-solid fa-satellite-dish placeholder-icon"></i>
-                            <p>Run weather location query or crop ticker query to view real-time feed.</p>
-                        </div>
-                        <div class="result-content" id="wm-result" style="display: none;">
-                            <!-- Weather/Market outputs -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Logs Tracker Tab -->
-            <section id="tab-logs" class="tab-pane">
-                <div class="logs-grid">
-                    <div class="logs-entry glass">
-                        <h3>Create Log Entry</h3>
-                        <div class="form-group">
-                            <label for="sheet-name">Select Sheet Target</label>
-                            <select id="sheet-name" class="form-control">
-                                <option value="crop_health">Crop Health Log</option>
-                                <option value="operations">Farm Operations</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="log-crop">Crop</label>
-                            <input type="text" id="log-crop" class="form-control" placeholder="e.g. Corn, Soybeans">
-                        </div>
-                        <div class="form-group">
-                            <label for="log-status">Status / Action</label>
-                            <input type="text" id="log-status" class="form-control" placeholder="e.g. Healthy, Fertilized">
-                        </div>
-                        <div class="form-group">
-                            <label for="log-notes">Details / Notes</label>
-                            <textarea id="log-notes" class="form-control" rows="4" placeholder="Detailed operation notes..."></textarea>
-                        </div>
-                        <button class="btn btn-primary btn-block" id="btn-write-log">
-                            <i class="fa-solid fa-file-pen"></i> Submit Log Entry
-                        </button>
-                    </div>
-
-                    <div class="logs-list glass">
-                        <div class="logs-list-header">
-                            <h3>Logged Actions Tracker</h3>
-                            <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">
-                                <i class="fa-solid fa-rotate"></i> Refresh Logs
-                            </button>
-                        </div>
-                        <div class="logs-container" id="logs-container">
-                            <!-- Logs dynamically loaded -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Advisory Tab -->
-            <section id="tab-advisory" class="tab-pane">
-                <div class="advisory-layout glass">
-                    <div class="advisory-header">
-                        <div>
-                            <h3>Advisory Studio</h3>
-                            <p>Generate a 4-signal fusion recommendation report integrating crop state, weather models, market outlooks, and history.</p>
-                        </div>
-                        <button class="btn btn-primary" id="btn-generate-advisory">
-                            <i class="fa-solid fa-compass-drafting"></i> Generate Fusion Report
-                        </button>
-                    </div>
-                    <div class="advisory-result" id="advisory-result">
-                        <div class="result-placeholder">
-                            <i class="fa-solid fa-brain placeholder-icon"></i>
-                            <p>Click "Generate Fusion Report" to construct agricultural recommendations.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
+    <!-- Step indicator dots -->
+    <div class="ob-step-dots" aria-label="Step progress">
+        <div class="ob-dot active" id="dot-1"></div>
+        <div class="ob-dot" id="dot-2"></div>
     </div>
+
+    <!-- ── STEP 1 – Location Setup ── -->
+    <div id="ob-step-1" class="ob-card ob-active">
+        <div class="ob-brand">
+            <i class="fa-solid fa-seedling ob-brand-icon"></i>
+            <span class="ob-brand-name">CropPulse<span>AI</span></span>
+        </div>
+        <h2 class="ob-title">Set up your farm</h2>
+        <p class="ob-subtitle">Select your location to get local weather and market data</p>
+
+        <div class="ob-form">
+            <div class="ob-field">
+                <label for="ob-country" class="ob-label">
+                    <i class="fa-solid fa-globe"></i> Country
+                </label>
+                <div class="ob-select-wrap">
+                    <select id="ob-country" class="ob-select" aria-label="Select country">
+                        <option value="">Choose a country...</option>
+                        <option value="ecuador">Ecuador</option>
+                        <option value="colombia">Colombia</option>
+                        <option value="peru">Peru</option>
+                        <option value="bolivia">Bolivia</option>
+                        <option value="brazil">Brazil</option>
+                        <option value="panama">Panama</option>
+                        <option value="costa_rica">Costa Rica</option>
+                        <option value="mexico">Mexico</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down ob-select-arrow"></i>
+                </div>
+            </div>
+
+            <div class="ob-field ob-field-disabled" id="ob-province-field">
+                <label for="ob-province" class="ob-label">
+                    <i class="fa-solid fa-map"></i> Province / State
+                </label>
+                <div class="ob-select-wrap">
+                    <select id="ob-province" class="ob-select" disabled aria-label="Select province">
+                        <option value="">Select country first...</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down ob-select-arrow"></i>
+                </div>
+            </div>
+
+            <div class="ob-field ob-field-disabled" id="ob-canton-field">
+                <label for="ob-canton" class="ob-label">
+                    <i class="fa-solid fa-location-dot"></i> Canton / Municipality
+                </label>
+                <div class="ob-select-wrap">
+                    <select id="ob-canton" class="ob-select" disabled aria-label="Select canton">
+                        <option value="">Select province first...</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down ob-select-arrow"></i>
+                </div>
+            </div>
+
+            <div id="ob-location-badge" class="ob-location-badge" style="display:none">
+                <i class="fa-solid fa-map-pin"></i>
+                <span id="ob-location-text"></span>
+            </div>
+        </div>
+
+        <button id="ob-next-btn" class="ob-btn ob-btn-primary" disabled>
+            Next <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- ── STEP 2 – Farm Grid Setup ── -->
+    <div id="ob-step-2" class="ob-card" style="display:none">
+        <div class="ob-back-row">
+            <button id="ob-back-btn" class="ob-btn-ghost">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </button>
+        </div>
+        <h2 class="ob-title">Define your parcels</h2>
+        <p class="ob-subtitle">Tap each cell to assign a crop</p>
+
+        <div class="ob-grid-controls">
+            <div class="ob-size-group">
+                <label class="ob-label" for="ob-rows"><i class="fa-solid fa-table-rows"></i> Rows</label>
+                <div class="ob-number-wrap">
+                    <button class="ob-num-btn" id="rows-dec" aria-label="Decrease rows">−</button>
+                    <input type="number" id="ob-rows" class="ob-num-input" value="2" min="1" max="10" aria-label="Number of rows">
+                    <button class="ob-num-btn" id="rows-inc" aria-label="Increase rows">+</button>
+                </div>
+            </div>
+            <div class="ob-size-divider">×</div>
+            <div class="ob-size-group">
+                <label class="ob-label" for="ob-cols"><i class="fa-solid fa-table-columns"></i> Columns</label>
+                <div class="ob-number-wrap">
+                    <button class="ob-num-btn" id="cols-dec" aria-label="Decrease columns">−</button>
+                    <input type="number" id="ob-cols" class="ob-num-input" value="3" min="1" max="10" aria-label="Number of columns">
+                    <button class="ob-num-btn" id="cols-inc" aria-label="Increase columns">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Farm Grid -->
+        <div class="ob-farm-grid-wrapper">
+            <div id="ob-farm-grid" class="ob-farm-grid" role="grid" aria-label="Farm parcels"></div>
+        </div>
+
+        <!-- Crop legend -->
+        <div class="ob-legend">
+            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#10b981"></span>Cacao</div>
+            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#f59e0b"></span>Banana</div>
+            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#f97316"></span>Coffee</div>
+            <div class="ob-legend-item"><span class="ob-legend-dot" style="background:#3b82f6"></span>Other</div>
+            <div class="ob-legend-item"><span class="ob-legend-dot ob-legend-empty"></span>Empty</div>
+        </div>
+
+        <button id="ob-start-btn" class="ob-btn ob-btn-primary ob-btn-full">
+            <i class="fa-solid fa-rocket"></i> Get started
+        </button>
+
+        <div id="ob-saving-msg" class="ob-saving" style="display:none">
+            <i class="fa-solid fa-spinner fa-spin"></i> Saving your farm profile...
+        </div>
+    </div>
+
+    <!-- Crop picker modal (shared) -->
+    <div id="ob-crop-modal" class="ob-crop-modal" style="display:none" role="dialog" aria-label="Select crop">
+        <div class="ob-crop-modal-inner">
+            <div class="ob-crop-modal-header">
+                <span id="ob-crop-modal-title">Assign crop to <strong id="ob-crop-cell-label"></strong></span>
+                <button id="ob-crop-modal-close" class="ob-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="ob-crop-options" id="ob-crop-options">
+                <!-- Rendered by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN APP (hidden until onboarding complete)
+═══════════════════════════════════════════════════════════════ -->
+<div class="app-container" id="main-app" style="display:none">
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="brand">
+            <i class="fa-solid fa-seedling brand-icon"></i>
+            <div class="brand-text">
+                <h1>CropPulse<span>AI</span></h1>
+                <p>Decision Studio</p>
+            </div>
+        </div>
+
+        <!-- Farm location pill -->
+        <div class="sidebar-location" id="sidebar-location">
+            <i class="fa-solid fa-location-dot"></i>
+            <span id="sidebar-location-text">—</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#vision" class="nav-item" data-tab="vision">
+                <i class="fa-solid fa-eye"></i>
+                <span>Crop Vision</span>
+            </a>
+            <a href="#weather-market" class="nav-item" data-tab="weather-market">
+                <i class="fa-solid fa-cloud-sun-rain"></i>
+                <span>Weather &amp; Markets</span>
+            </a>
+            <a href="#logs" class="nav-item" data-tab="logs">
+                <i class="fa-solid fa-list-check"></i>
+                <span>Crop Logs</span>
+            </a>
+            <a href="#advisory" class="nav-item" data-tab="advisory">
+                <i class="fa-solid fa-compass"></i>
+                <span>Advisory Fusion</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <p>Powered by Gemini &amp; ADK 2.0</p>
+            <button class="sidebar-reset-btn" id="btn-reset-onboarding" title="Reset farm setup">
+                <i class="fa-solid fa-arrows-rotate"></i> Reset setup
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+        <!-- Mobile topbar -->
+        <div class="mobile-topbar">
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="mobile-brand">
+                <i class="fa-solid fa-seedling"></i> CropPulseAI
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-title">
+                <h2 id="tab-title">Workspace Dashboard</h2>
+                <p id="tab-subtitle">Real-time agricultural decision metrics &amp; alerts</p>
+            </div>
+            <div class="header-status">
+                <div class="status-indicator online"></div>
+                <span>System Connected</span>
+            </div>
+        </header>
+
+        <!-- Dashboard Tab -->
+        <section id="tab-dashboard" class="tab-pane active">
+            <div class="metrics-grid">
+                <div class="metric-card glass">
+                    <div class="metric-header">
+                        <span>CURRENT WEATHER</span>
+                        <i class="fa-solid fa-cloud-sun sun-icon"></i>
+                    </div>
+                    <div class="metric-value" id="dash-weather">—</div>
+                    <div class="metric-sub" id="dash-weather-sub">Loading...</div>
+                </div>
+                <div class="metric-card glass">
+                    <div class="metric-header">
+                        <span>MARKET PRICE</span>
+                        <i class="fa-solid fa-chart-simple market-icon"></i>
+                    </div>
+                    <div class="metric-value" id="dash-price">—</div>
+                    <div class="metric-sub" id="dash-price-sub">Select crop to load</div>
+                </div>
+                <div class="metric-card glass">
+                    <div class="metric-header">
+                        <span>LOGGED ACTIONS</span>
+                        <i class="fa-solid fa-circle-check check-icon"></i>
+                    </div>
+                    <div class="metric-value" id="dash-logs">0 Active</div>
+                    <div class="metric-sub">Pending farm activities</div>
+                </div>
+            </div>
+
+            <!-- Farm Grid Snapshot -->
+            <div class="dashboard-farm-section glass">
+                <div class="dashboard-farm-header">
+                    <h3><i class="fa-solid fa-map"></i> Farm Grid Overview</h3>
+                    <span class="dash-farm-location" id="dash-farm-location"></span>
+                </div>
+                <div id="dash-farm-grid" class="dash-farm-grid"></div>
+            </div>
+
+            <div class="dashboard-panels">
+                <div class="panel-left glass">
+                    <h3><i class="fa-solid fa-circle-exclamation"></i> Action Required</h3>
+                    <p class="alert-desc" id="dash-alert-desc">Loading farm alerts...</p>
+                    <div class="panel-actions">
+                        <button class="btn btn-primary" onclick="switchTab('advisory')">Get Advisory Report</button>
+                    </div>
+                </div>
+                <div class="panel-right glass">
+                    <h3>Quick Navigation</h3>
+                    <div class="quick-links">
+                        <button class="quick-link" onclick="switchTab('vision')"><i class="fa-solid fa-camera"></i> Diagnose Leaf</button>
+                        <button class="quick-link" onclick="switchTab('weather-market')"><i class="fa-solid fa-dollar-sign"></i> Crop Ticker</button>
+                        <button class="quick-link" onclick="switchTab('logs')"><i class="fa-solid fa-plus"></i> Log Activity</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Crop Vision Tab -->
+        <section id="tab-vision" class="tab-pane">
+            <div class="vision-grid">
+                <div class="vision-upload glass">
+                    <h3>Crop Image Diagnostic</h3>
+                    <p>Upload leaf, plant, or soil images for multimodal diagnostic analysis.</p>
+                    <div class="upload-zone" id="dropzone">
+                        <i class="fa-solid fa-image upload-icon"></i>
+                        <p>Drag &amp; drop image here or tap to browse</p>
+                        <input type="file" id="image-upload" accept="image/*" style="display:none">
+                        <img id="image-preview" src="" alt="Preview" style="display:none">
+                    </div>
+                    <div class="form-group">
+                        <label for="vision-mode">Select Analysis Mode</label>
+                        <select id="vision-mode" class="form-control">
+                            <option value="disease">Pest &amp; Disease Detection</option>
+                            <option value="nutrient">Nutrient Deficiency Analysis</option>
+                            <option value="growth">Growth Stage Classification</option>
+                            <option value="soil">Soil Health Assessment</option>
+                            <option value="weed">Weed Detection</option>
+                            <option value="harvest">Harvest Readiness Check</option>
+                            <option value="general">General Crop Health Inspection</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btn-analyze-vision" disabled>
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Run Diagnostic
+                    </button>
+                </div>
+                <div class="vision-results glass">
+                    <h3>Diagnostic Report</h3>
+                    <div class="result-placeholder" id="vision-placeholder">
+                        <i class="fa-solid fa-microscope placeholder-icon"></i>
+                        <p>Upload an image and run diagnostic to view results.</p>
+                    </div>
+                    <div class="result-content" id="vision-result" style="display:none"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Weather & Market Tab -->
+        <section id="tab-weather-market" class="tab-pane">
+            <div class="wm-grid">
+                <div class="wm-inputs glass">
+                    <h3>Weather Query</h3>
+                    <div class="coords-row">
+                        <div class="form-group">
+                            <label for="lat">Latitude</label>
+                            <input type="number" id="lat" class="form-control" value="-0.2687" step="0.0001">
+                        </div>
+                        <div class="form-group">
+                            <label for="lng">Longitude</label>
+                            <input type="number" id="lng" class="form-control" value="-79.4326" step="0.0001">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btn-fetch-weather">
+                        <i class="fa-solid fa-location-crosshairs"></i> Fetch Weather
+                    </button>
+                    <h3 style="margin-top:2rem">Commodity Price Ticker</h3>
+                    <div class="form-group">
+                        <label for="crop-commodity">Select Commodity</label>
+                        <select id="crop-commodity" class="form-control">
+                            <option value="cacao">Cacao</option>
+                            <option value="banana">Banana</option>
+                            <option value="coffee">Coffee</option>
+                            <option value="palm_oil">Palm Oil</option>
+                            <option value="rice">Rice</option>
+                            <option value="maize">Maize</option>
+                            <option value="plantain">Plantain</option>
+                            <option value="cassava">Cassava</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btn-fetch-price">
+                        <i class="fa-solid fa-money-bill-trend-up"></i> Fetch Price
+                    </button>
+                </div>
+                <div class="wm-results glass">
+                    <h3>Real-time Feed</h3>
+                    <div class="result-placeholder" id="wm-placeholder">
+                        <i class="fa-solid fa-satellite-dish placeholder-icon"></i>
+                        <p>Run a weather or commodity query to view results.</p>
+                    </div>
+                    <div class="result-content" id="wm-result" style="display:none"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logs Tracker Tab -->
+        <section id="tab-logs" class="tab-pane">
+            <div class="logs-grid">
+                <div class="logs-entry glass">
+                    <h3>Create Log Entry</h3>
+                    <div class="form-group">
+                        <label for="log-parcel">Parcel</label>
+                        <select id="log-parcel" class="form-control">
+                            <option value="">Select parcel...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="log-activity">Activity</label>
+                        <input type="text" id="log-activity" class="form-control" placeholder="e.g. Pruning, Fertilising, Irrigation">
+                    </div>
+                    <div class="form-group">
+                        <label for="log-status">Status</label>
+                        <select id="log-status" class="form-control">
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="log-date">Date</label>
+                        <input type="date" id="log-date" class="form-control">
+                    </div>
+                    <button class="btn btn-primary btn-block" id="btn-write-log">
+                        <i class="fa-solid fa-file-pen"></i> Submit Log Entry
+                    </button>
+                </div>
+                <div class="logs-list glass">
+                    <div class="logs-list-header">
+                        <h3>Activity Tracker</h3>
+                        <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">
+                            <i class="fa-solid fa-rotate"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="logs-container" id="logs-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Advisory Tab -->
+        <section id="tab-advisory" class="tab-pane">
+            <div class="advisory-layout glass">
+                <div class="advisory-header">
+                    <div>
+                        <h3>Advisory Fusion Studio</h3>
+                        <p>Generate a 4-signal cross-intelligence recommendation report integrating crop vision, weather models, market prices, and farm history.</p>
+                    </div>
+                    <button class="btn btn-primary" id="btn-generate-advisory">
+                        <i class="fa-solid fa-compass-drafting"></i> Generate Report
+                    </button>
+                </div>
+                <div class="advisory-result" id="advisory-result">
+                    <div class="result-placeholder">
+                        <i class="fa-solid fa-brain placeholder-icon"></i>
+                        <p>Click "Generate Report" to build your agricultural recommendation.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Mobile nav overlay -->
+<div class="mobile-nav-overlay" id="mobile-nav-overlay"></div>
+
+<script src="app.js"></script>
 </body>
 </html>
