@@ -216,15 +216,17 @@ root_workflow = Workflow(
             route_after_router,
             {"vision": vision_agent, "advisory": dispatch_advisory_signals},
         ),
-        # Fan-out from vision agent (image-bearing intents)
+        # Serialized signal gathering — weather then market then compile.
+        # A serial chain (instead of parallel fan-out) guarantees a single
+        # trigger of `compile_advisory_input`. The parallel fan-in variant
+        # fired `compile` once per parent, cascading into a duplicate
+        # `advisory_agent` run and a double message to the user.
+        # Vision path (image-bearing intents):
         (vision_agent, weather_node),
-        (vision_agent, market_node),
-        # Fan-out from dispatch (text-only intents) — mirrors vision_agent so
-        # weather and market signals always reach the Advisory Agent
+        # Text path (text-only intents):
         (dispatch_advisory_signals, weather_node),
-        (dispatch_advisory_signals, market_node),
-        # Fan-in from parallel nodes to advisory compile
-        (weather_node, compile_advisory_input),
+        # Chain: weather → market → compile (single trigger)
+        (weather_node, market_node),
         (market_node, compile_advisory_input),
         # Trigger Advisory Agent with compiled prompt
         (compile_advisory_input, advisory_agent),
