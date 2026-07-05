@@ -1,886 +1,1198 @@
 /* ═══════════════════════════════════════════════════════════════
-   CropPulse AI — app.js
-   Onboarding flow + main app logic
+   CropPulse AI — app.js  v2
+   Onboarding + Farm tab (indicators / grid / calendar)
+                + AI Assistant tab (context / suggestions / chat)
 ═══════════════════════════════════════════════════════════════ */
-
 'use strict';
 
-// ── Session identifiers ───────────────────────────────────────
-const userId    = 'farmer_' + Math.random().toString(36).substring(2, 9);
-const sessionId = 'session_' + Math.random().toString(36).substring(2, 9);
+// ─────────────────────────────────────────────────────────────
+// GLOBAL STATE
+// -------------------------------------------------------------
+const APP = {
+    userId:         'farmer_' + Math.random().toString(36).slice(2, 9),
+    sessionId:      'session_' + Math.random().toString(36).slice(2, 9),
+    profile:        null,   // localStorage farm profile
+    indicators:     [],     // [{parcel, crop, status, pending_action, ...}]
+    cropPlan:       [],     // [{date, parcel, crop, activity, status}]
+    selectedParcel: null,   // { id, crop } or null
+    calDate:        new Date(),
+    selectedCalDay: null,
+    weather:        null,   // {temp, humidity, condition}
+    prices:         {},     // { cropId: { price, unit, change } }
+    messages:       [],     // chat history
+    pendingImage:   null,   // { base64, mimeType, dataUrl }
+};
 
-// ── Storage keys ─────────────────────────────────────────────
 const STORAGE_KEY = 'croppulse_farm_profile';
 
 // ─────────────────────────────────────────────────────────────
-// LOCATION DATA — mirroring the MCP server lookup table
-// Format: { country: { province: [canton, ...], ... } }
-// ------------------------------------------------------------- 
+// CROP DEFINITIONS
+// -------------------------------------------------------------
+const CROPS = [
+    { id:'cacao',    label:'Cacao',    icon:'🍫', bg:'#E1F5EE', tx:'#065f46', color:'#10b981' },
+    { id:'banana',   label:'Banana',   icon:'🍌', bg:'#FAEEDA', tx:'#92400e', color:'#f59e0b' },
+    { id:'coffee',   label:'Coffee',   icon:'☕', bg:'#FAECE7', tx:'#9a3412', color:'#f97316' },
+    { id:'palm_oil', label:'Palm Oil', icon:'🌴', bg:'#E6F1FB', tx:'#1e40af', color:'#3b82f6' },
+    { id:'rice',     label:'Rice',     icon:'🌾', bg:'#E6F1FB', tx:'#1e40af', color:'#3b82f6' },
+    { id:'maize',    label:'Maize',    icon:'🌽', bg:'#FAEEDA', tx:'#92400e', color:'#f59e0b' },
+    { id:'plantain', label:'Plantain', icon:'🍌', bg:'#E6F1FB', tx:'#1e40af', color:'#3b82f6' },
+    { id:'cassava',  label:'Cassava',  icon:'🥔', bg:'#EEF2EE', tx:'#3f6212', color:'#84cc16' },
+    { id:'other',    label:'Other',    icon:'🌱', bg:'#E6F1FB', tx:'#1e40af', color:'#3b82f6' },
+    { id:'empty',    label:'Empty',    icon:'✕',  bg:null,      tx:null,      color:'#56708a'  },
+];
+const cropOf = id => CROPS.find(c => c.id === id) || null;
+
+// WMO weather codes → short description
+const WMO = {
+    0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
+    45:'Foggy', 48:'Rime fog', 51:'Light drizzle', 53:'Moderate drizzle', 55:'Dense drizzle',
+    61:'Light rain', 63:'Moderate rain', 65:'Heavy rain',
+    71:'Light snow', 73:'Moderate snow', 75:'Heavy snow',
+    80:'Slight showers', 81:'Moderate showers', 82:'Violent showers',
+    95:'Thunderstorm', 96:'Thunderstorm + hail', 99:'Thunderstorm + heavy hail',
+};
+
+// ─────────────────────────────────────────────────────────────
+// LOCATION DATA (mirrors Python MCP lookup)
+// -------------------------------------------------------------
 const LOCATION_DATA = {
     ecuador: {
-        'Azuay':                    ['Cuenca', 'Girón', 'Santa Isabel', 'Sigsig', 'Pucará'],
-        'Bolívar':                  ['Guaranda', 'Chillanes', 'Caluma', 'Echeandía'],
-        'Cañar':                    ['Azogues', 'Biblián', 'Cañar', 'La Troncal'],
-        'Carchi':                   ['Tulcán', 'Montúfar', 'Espejo', 'Mira'],
-        'Chimborazo':               ['Riobamba', 'Alausí', 'Chunchi', 'Guano', 'Penipe'],
-        'Cotopaxi':                 ['Latacunga', 'Pujilí', 'Salcedo', 'Sigchos', 'La Maná'],
-        'El Oro':                   ['Machala', 'Santa Rosa', 'Pasaje', 'Huaquillas', 'Arenillas'],
-        'Esmeraldas':               ['Esmeraldas', 'Quinindé', 'San Lorenzo', 'Muisne', 'Atacames'],
-        'Galápagos':                ['Puerto Ayora', 'Puerto Baquerizo Moreno', 'Puerto Villamil'],
-        'Guayas':                   ['Guayaquil', 'Durán', 'Milagro', 'Daule', 'Samborondón', 'Naranjal'],
-        'Imbabura':                 ['Ibarra', 'Otavalo', 'Cotacachi', 'Antonio Ante', 'Urcuquí'],
-        'Loja':                     ['Loja', 'Catamayo', 'Macará', 'Cariamanga', 'Zapotillo'],
-        'Los Ríos':                 ['Babahoyo', 'Quevedo', 'Vinces', 'Buena Fe', 'Valencia'],
-        'Manabí':                   ['Portoviejo', 'Manta', 'Chone', 'El Carmen', 'Pedernales', 'Jipijapa', 'Montecristi', 'Bahía de Caráquez'],
-        'Morona Santiago':          ['Macas', 'Sucúa', 'Gualaquiza', 'Palora'],
-        'Napo':                     ['Tena', 'Archidona', 'El Chaco'],
-        'Orellana':                 ['Francisco de Orellana', 'Loreto', 'La Joya de los Sachas'],
-        'Pastaza':                  ['Puyo', 'Mera', 'Santa Clara'],
-        'Pichincha':                ['Quito', 'Cayambe', 'Mejía', 'Rumiñahui', 'Pedro Moncayo'],
-        'Santa Elena':              ['Santa Elena', 'Salinas', 'La Libertad'],
-        'Santo Domingo de los Tsáchilas': ['Santo Domingo'],
-        'Sucumbíos':                ['Lago Agrio', 'Shushufindi', 'Cuyabeno'],
-        'Tungurahua':               ['Ambato', 'Baños', 'Pelileo', 'Píllaro'],
-        'Zamora Chinchipe':         ['Zamora', 'Yantzaza', 'Centinela del Cóndor'],
+        'Azuay':['Cuenca','Girón','Santa Isabel','Sigsig','Pucará'],
+        'Bolívar':['Guaranda','Chillanes','Caluma','Echeandía'],
+        'Cañar':['Azogues','Biblián','Cañar','La Troncal'],
+        'Carchi':['Tulcán','Montúfar','Espejo','Mira'],
+        'Chimborazo':['Riobamba','Alausí','Chunchi','Guano','Penipe'],
+        'Cotopaxi':['Latacunga','Pujilí','Salcedo','Sigchos','La Maná'],
+        'El Oro':['Machala','Santa Rosa','Pasaje','Huaquillas','Arenillas'],
+        'Esmeraldas':['Esmeraldas','Quinindé','San Lorenzo','Muisne','Atacames'],
+        'Galápagos':['Puerto Ayora','Puerto Baquerizo Moreno','Puerto Villamil'],
+        'Guayas':['Guayaquil','Durán','Milagro','Daule','Samborondón','Naranjal'],
+        'Imbabura':['Ibarra','Otavalo','Cotacachi','Antonio Ante','Urcuquí'],
+        'Loja':['Loja','Catamayo','Macará','Cariamanga','Zapotillo'],
+        'Los Ríos':['Babahoyo','Quevedo','Vinces','Buena Fe','Valencia'],
+        'Manabí':['Portoviejo','Manta','Chone','El Carmen','Pedernales','Jipijapa','Montecristi','Bahía de Caráquez'],
+        'Morona Santiago':['Macas','Sucúa','Gualaquiza','Palora'],
+        'Napo':['Tena','Archidona','El Chaco'],
+        'Orellana':['Francisco de Orellana','Loreto','La Joya de los Sachas'],
+        'Pastaza':['Puyo','Mera','Santa Clara'],
+        'Pichincha':['Quito','Cayambe','Mejía','Rumiñahui','Pedro Moncayo'],
+        'Santa Elena':['Santa Elena','Salinas','La Libertad'],
+        'Santo Domingo de los Tsáchilas':['Santo Domingo'],
+        'Sucumbíos':['Lago Agrio','Shushufindi','Cuyabeno'],
+        'Tungurahua':['Ambato','Baños','Pelileo','Píllaro'],
+        'Zamora Chinchipe':['Zamora','Yantzaza','Centinela del Cóndor'],
     },
     colombia: {
-        'Antioquia':            ['Medellín', 'Bello', 'Envigado', 'Apartadó', 'Turbo'],
-        'Atlántico':            ['Barranquilla', 'Soledad', 'Malambo'],
-        'Bogotá D.C.':          ['Bogotá'],
-        'Bolívar':              ['Cartagena', 'Magangué'],
-        'Caldas':               ['Manizales', 'Chinchiná', 'Villamaría'],
-        'Cauca':                ['Popayán', 'Santander de Quilichao'],
-        'Cesar':                ['Valledupar', 'Aguachica'],
-        'Córdoba':              ['Montería', 'Cereté'],
-        'Cundinamarca':         ['Bogotá', 'Soacha', 'Fusagasugá'],
-        'Huila':                ['Neiva', 'Pitalito', 'Garzón'],
-        'La Guajira':           ['Riohacha', 'Maicao'],
-        'Magdalena':            ['Santa Marta', 'Ciénaga'],
-        'Meta':                 ['Villavicencio', 'Acacías'],
-        'Nariño':               ['Pasto', 'Tumaco', 'Ipiales'],
-        'Norte de Santander':   ['Cúcuta', 'Ocaña'],
-        'Quindío':              ['Armenia', 'Calarcá'],
-        'Risaralda':            ['Pereira', 'Dosquebradas', 'Santa Rosa de Cabal'],
-        'Santander':            ['Bucaramanga', 'Floridablanca', 'Barrancabermeja'],
-        'Sucre':                ['Sincelejo', 'Corozal'],
-        'Tolima':               ['Ibagué', 'Espinal', 'Melgar'],
-        'Valle del Cauca':      ['Cali', 'Buenaventura', 'Palmira', 'Tuluá'],
+        'Antioquia':['Medellín','Bello','Envigado','Apartadó','Turbo'],
+        'Atlántico':['Barranquilla','Soledad','Malambo'],
+        'Bogotá D.C.':['Bogotá'],
+        'Bolívar':['Cartagena','Magangué'],
+        'Caldas':['Manizales','Chinchiná','Villamaría'],
+        'Cauca':['Popayán','Santander de Quilichao'],
+        'Cesar':['Valledupar','Aguachica'],
+        'Córdoba':['Montería','Cereté'],
+        'Cundinamarca':['Bogotá','Soacha','Fusagasugá'],
+        'Huila':['Neiva','Pitalito','Garzón'],
+        'La Guajira':['Riohacha','Maicao'],
+        'Magdalena':['Santa Marta','Ciénaga'],
+        'Meta':['Villavicencio','Acacías'],
+        'Nariño':['Pasto','Tumaco','Ipiales'],
+        'Norte de Santander':['Cúcuta','Ocaña'],
+        'Quindío':['Armenia','Calarcá'],
+        'Risaralda':['Pereira','Dosquebradas','Santa Rosa de Cabal'],
+        'Santander':['Bucaramanga','Floridablanca','Barrancabermeja'],
+        'Sucre':['Sincelejo','Corozal'],
+        'Tolima':['Ibagué','Espinal','Melgar'],
+        'Valle del Cauca':['Cali','Buenaventura','Palmira','Tuluá'],
     },
     peru: {
-        'Amazonas':         ['Chachapoyas', 'Bagua'],
-        'Áncash':           ['Huaraz', 'Chimbote', 'Carhuaz'],
-        'Apurímac':         ['Abancay', 'Andahuaylalas'],
-        'Arequipa':         ['Arequipa', 'Mollendo', 'Camana'],
-        'Ayacucho':         ['Ayacucho', 'Huanta'],
-        'Cajamarca':        ['Cajamarca', 'Jaén', 'Chota'],
-        'Cusco':            ['Cusco', 'Espinar', 'Quillabamba'],
-        'Huancavelica':     ['Huancavelica', 'Acobamba'],
-        'Huánuco':          ['Huánuco', 'Tingo María'],
-        'Ica':              ['Ica', 'Pisco', 'Nazca'],
-        'Junín':            ['Huancayo', 'Tarma', 'La Merced'],
-        'La Libertad':      ['Trujillo', 'Chepén', 'Otuzco'],
-        'Lambayeque':       ['Chiclayo', 'Ferreñafe', 'Lambayeque'],
-        'Lima':             ['Lima', 'Barranca', 'Cañete'],
-        'Loreto':           ['Iquitos', 'Yurimaguas'],
-        'Madre de Dios':    ['Puerto Maldonado'],
-        'Moquegua':         ['Moquegua', 'Ilo'],
-        'Pasco':            ['Cerro de Pasco', 'Oxapampa'],
-        'Piura':            ['Piura', 'Sullana', 'Talara', 'Paita'],
-        'Puno':             ['Puno', 'Juliaca', 'Azángaro'],
-        'San Martín':       ['Tarapoto', 'Moyobamba', 'Bellavista'],
-        'Tacna':            ['Tacna'],
-        'Tumbes':           ['Tumbes', 'Zarumilla'],
-        'Ucayali':          ['Pucallpa', 'Aguaytía'],
+        'Amazonas':['Chachapoyas','Bagua'],
+        'Áncash':['Huaraz','Chimbote','Carhuaz'],
+        'Apurímac':['Abancay','Andahuaylas'],
+        'Arequipa':['Arequipa','Mollendo','Camana'],
+        'Ayacucho':['Ayacucho','Huanta'],
+        'Cajamarca':['Cajamarca','Jaén','Chota'],
+        'Cusco':['Cusco','Espinar','Quillabamba'],
+        'Huancavelica':['Huancavelica','Acobamba'],
+        'Huánuco':['Huánuco','Tingo María'],
+        'Ica':['Ica','Pisco','Nazca'],
+        'Junín':['Huancayo','Tarma','La Merced'],
+        'La Libertad':['Trujillo','Chepén','Otuzco'],
+        'Lambayeque':['Chiclayo','Ferreñafe','Lambayeque'],
+        'Lima':['Lima','Barranca','Cañete'],
+        'Loreto':['Iquitos','Yurimaguas'],
+        'Madre de Dios':['Puerto Maldonado'],
+        'Moquegua':['Moquegua','Ilo'],
+        'Pasco':['Cerro de Pasco','Oxapampa'],
+        'Piura':['Piura','Sullana','Talara','Paita'],
+        'Puno':['Puno','Juliaca','Azángaro'],
+        'San Martín':['Tarapoto','Moyobamba','Bellavista'],
+        'Tacna':['Tacna'],
+        'Tumbes':['Tumbes','Zarumilla'],
+        'Ucayali':['Pucallpa','Aguaytía'],
     },
     bolivia: {
-        'Cochabamba': ['Cochabamba', 'Quillacollo', 'Sacaba'],
-        'La Paz':     ['La Paz', 'El Alto', 'Caranavi'],
-        'Santa Cruz': ['Santa Cruz de la Sierra', 'Montero', 'Warnes'],
-        'Oruro':      ['Oruro'],
-        'Potosí':     ['Potosí', 'Uyuni'],
-        'Sucre':      ['Sucre'],
-        'Beni':       ['Trinidad', 'Riberalta'],
-        'Pando':      ['Cobija'],
-        'Tarija':     ['Tarija', 'Yacuiba'],
+        'Cochabamba':['Cochabamba','Quillacollo','Sacaba'],
+        'La Paz':['La Paz','El Alto','Caranavi'],
+        'Santa Cruz':['Santa Cruz de la Sierra','Montero','Warnes'],
+        'Oruro':['Oruro'],
+        'Potosí':['Potosí','Uyuni'],
+        'Sucre':['Sucre'],
+        'Beni':['Trinidad','Riberalta'],
+        'Pando':['Cobija'],
+        'Tarija':['Tarija','Yacuiba'],
     },
     brazil: {
-        'Amazonas':         ['Manaus', 'Parintins'],
-        'Bahia':            ['Salvador', 'Feira de Santana', 'Vitória da Conquista'],
-        'Goiás':            ['Goiânia', 'Anápolis'],
-        'Mato Grosso':      ['Cuiabá', 'Sinop'],
-        'Minas Gerais':     ['Belo Horizonte', 'Uberlândia'],
-        'Pará':             ['Belém', 'Santarém'],
-        'Paraná':           ['Curitiba', 'Londrina', 'Maringá'],
-        'Rio de Janeiro':   ['Rio de Janeiro', 'Campos'],
-        'Rio Grande do Sul':['Porto Alegre', 'Caxias do Sul'],
-        'São Paulo':        ['São Paulo', 'Campinas', 'Ribeirão Preto'],
+        'Amazonas':['Manaus','Parintins'],
+        'Bahia':['Salvador','Feira de Santana','Vitória da Conquista'],
+        'Goiás':['Goiânia','Anápolis'],
+        'Mato Grosso':['Cuiabá','Sinop'],
+        'Minas Gerais':['Belo Horizonte','Uberlândia'],
+        'Pará':['Belém','Santarém'],
+        'Paraná':['Curitiba','Londrina','Maringá'],
+        'Rio de Janeiro':['Rio de Janeiro','Campos'],
+        'Rio Grande do Sul':['Porto Alegre','Caxias do Sul'],
+        'São Paulo':['São Paulo','Campinas','Ribeirão Preto'],
     },
     panama: {
-        'Chiriquí':  ['David', 'Boquete', 'Bugaba'],
-        'Coclé':     ['Penonomé', 'La Pintada'],
-        'Herrera':   ['Chitré', 'Los Santos'],
-        'Panamá':    ['Ciudad de Panamá', 'Arraiján'],
-        'Veraguas':  ['Santiago', 'La Mesa'],
+        'Chiriquí':['David','Boquete','Bugaba'],
+        'Coclé':['Penonomé','La Pintada'],
+        'Herrera':['Chitré','Los Santos'],
+        'Panamá':['Ciudad de Panamá','Arraiján'],
+        'Veraguas':['Santiago','La Mesa'],
     },
     costa_rica: {
-        'Alajuela':     ['Alajuela', 'San Ramón', 'Grecia'],
-        'Cartago':      ['Cartago', 'Turrialba'],
-        'Guanacaste':   ['Liberia', 'Nicoya'],
-        'Heredia':      ['Heredia', 'San Isidro'],
-        'Limón':        ['Limón', 'Guápiles'],
-        'Puntarenas':   ['Puntarenas', 'Quepos'],
-        'San José':     ['San José', 'Desamparados'],
+        'Alajuela':['Alajuela','San Ramón','Grecia'],
+        'Cartago':['Cartago','Turrialba'],
+        'Guanacaste':['Liberia','Nicoya'],
+        'Heredia':['Heredia','San Isidro'],
+        'Limón':['Limón','Guápiles'],
+        'Puntarenas':['Puntarenas','Quepos'],
+        'San José':['San José','Desamparados'],
     },
     mexico: {
-        'Chiapas':          ['Tuxtla Gutiérrez', 'San Cristóbal de las Casas', 'Comitán'],
-        'Guerrero':         ['Acapulco', 'Chilpancingo', 'Iguala'],
-        'Jalisco':          ['Guadalajara', 'Zapopan', 'Tlaquepaque'],
-        'Michoacán':        ['Morelia', 'Uruapan', 'Lázaro Cárdenas'],
-        'Oaxaca':           ['Oaxaca de Juárez', 'Juchitán', 'Salina Cruz'],
-        'Tabasco':          ['Villahermosa', 'Cárdenas'],
-        'Veracruz':         ['Veracruz', 'Xalapa', 'Coatzacoalcos', 'Córdoba'],
-        'Yucatán':          ['Mérida', 'Progreso', 'Valladolid'],
+        'Chiapas':['Tuxtla Gutiérrez','San Cristóbal de las Casas','Comitán'],
+        'Guerrero':['Acapulco','Chilpancingo','Iguala'],
+        'Jalisco':['Guadalajara','Zapopan','Tlaquepaque'],
+        'Michoacán':['Morelia','Uruapan','Lázaro Cárdenas'],
+        'Oaxaca':['Oaxaca de Juárez','Juchitán','Salina Cruz'],
+        'Tabasco':['Villahermosa','Cárdenas'],
+        'Veracruz':['Veracruz','Xalapa','Coatzacoalcos','Córdoba'],
+        'Yucatán':['Mérida','Progreso','Valladolid'],
     },
 };
 
-// ── Crop definitions ─────────────────────────────────────────
-const CROPS = [
-    { id: 'cacao',    label: 'Cacao',    icon: '🍫', bg: '#E1F5EE', text: '#065f46' },
-    { id: 'banana',   label: 'Banana',   icon: '🍌', bg: '#FAEEDA', text: '#92400e' },
-    { id: 'coffee',   label: 'Coffee',   icon: '☕', bg: '#FAECE7', text: '#9a3412' },
-    { id: 'palm_oil', label: 'Palm Oil', icon: '🌴', bg: '#E6F1FB', text: '#1e40af' },
-    { id: 'rice',     label: 'Rice',     icon: '🌾', bg: '#E6F1FB', text: '#1e40af' },
-    { id: 'maize',    label: 'Maize',    icon: '🌽', bg: '#FAEEDA', text: '#92400e' },
-    { id: 'plantain', label: 'Plantain', icon: '🍌', bg: '#E6F1FB', text: '#1e40af' },
-    { id: 'cassava',  label: 'Cassava',  icon: '🥔', bg: '#E6F1FB', text: '#1e40af' },
-    { id: 'other',    label: 'Other',    icon: '🌱', bg: '#E6F1FB', text: '#1e40af' },
-    { id: 'empty',    label: 'Empty',    icon: '✕',  bg: null,      text: null       },
-];
-
-function cropById(id) { return CROPS.find(c => c.id === id) || null; }
-
-// ── Grid state ────────────────────────────────────────────────
-let gridState = {};      // { 'A1': 'cacao', 'A2': null, ... }
-let selectedCell = null; // cell id being edited
-
-// ── Farm profile ──────────────────────────────────────────────
-let farmProfile = null;
-
 // ─────────────────────────────────────────────────────────────
-// HELPERS
+// COORD LOOKUP (canton → {lat, lng})
 // -------------------------------------------------------------
-function cellId(row, col) {
-    return String.fromCharCode(65 + row) + (col + 1);
-}
+const COORDS = {
+    'El Carmen':      { lat:-0.2687,  lng:-79.4326 },
+    'Quinindé':       { lat: 0.3273,  lng:-79.4666 },
+    'Esmeraldas':     { lat: 0.9592,  lng:-79.6522 },
+    'Pedernales':     { lat: 0.0716,  lng:-80.0573 },
+    'Portoviejo':     { lat:-1.0545,  lng:-80.4545 },
+    'Manta':          { lat:-0.9677,  lng:-80.7089 },
+    'Chone':          { lat:-0.6934,  lng:-80.1001 },
+    'Guayaquil':      { lat:-2.1952,  lng:-79.8869 },
+    'Quito':          { lat:-0.1807,  lng:-78.4678 },
+    'Cuenca':         { lat:-2.9001,  lng:-79.0059 },
+    'Machala':        { lat:-3.2589,  lng:-79.9553 },
+    'Ambato':         { lat:-1.2491,  lng:-78.6168 },
+    'Ibarra':         { lat: 0.3517,  lng:-78.1222 },
+    'Loja':           { lat:-3.9931,  lng:-79.2042 },
+    'Babahoyo':       { lat:-1.8013,  lng:-79.5313 },
+    'Quevedo':        { lat:-1.0225,  lng:-79.4612 },
+    'Tulcán':         { lat: 0.8117,  lng:-77.7178 },
+    'Riobamba':       { lat:-1.6635,  lng:-78.6544 },
+    'Latacunga':      { lat:-0.9307,  lng:-78.6153 },
+    'Santo Domingo':  { lat:-0.2543,  lng:-79.1719 },
+    'Medellín':       { lat: 6.2308,  lng:-75.5906 },
+    'Bogotá':         { lat: 4.7110,  lng:-74.0721 },
+    'Cali':           { lat: 3.4372,  lng:-76.5225 },
+    'Lima':           { lat:-12.0464, lng:-77.0428 },
+    'Cusco':          { lat:-13.5170, lng:-71.9675 },
+    'Arequipa':       { lat:-16.4090, lng:-71.5375 },
+};
 
-function loadProfile() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
-}
-
-function saveProfile(profile) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-}
-
-function resetProfile() {
-    localStorage.removeItem(STORAGE_KEY);
+function coordsFor(canton) {
+    if (COORDS[canton]) return COORDS[canton];
+    // Default: El Carmen, Manabí, Ecuador
+    return { lat:-0.2687, lng:-79.4326 };
 }
 
 // ─────────────────────────────────────────────────────────────
-// ONBOARDING — STEP 1: Location
+// SYNTHETIC CROP PLAN  (used when backend is offline)
+// Builds N months of activities from the farm grid
 // -------------------------------------------------------------
+function buildCropPlan(profile) {
+    const plan = [];
+    const today = new Date();
+    const schedules = {
+        cacao:    ['Pruning','Fertilisation','Pest monitoring','Harvest prep','Irrigation','Soil analysis'],
+        banana:   ['Bunch inspection','Fertilisation','Irrigation','Harvest','De-leafing','Disease check'],
+        coffee:   ['Pruning','Flowering check','Shade management','Fertilisation','Harvest','Drying prep'],
+        palm_oil: ['Frond pruning','Fertilisation','Pest check','Harvesting','Soil sampling'],
+        rice:     ['Seeding','Water management','Fertilisation','Pest control','Harvest'],
+        maize:    ['Planting','Weeding','Fertilisation','Pollination check','Harvest'],
+        plantain: ['De-leafing','Fertilisation','Bunch support','Harvest','Irrigation'],
+        cassava:  ['Weeding','Fertilisation','Soil mulching','Harvest','Replanting'],
+    };
+    (profile.parcels || []).forEach(p => {
+        const acts = schedules[p.crop] || schedules['maize'];
+        acts.forEach((act, i) => {
+            const d = new Date(today);
+            // Spread activities over 12 months
+            d.setDate(d.getDate() + (i * 18) - 15 + Math.floor(Math.random()*5));
+            const isPast = d < today;
+            plan.push({
+                date:     d.toISOString().split('T')[0],
+                parcel:   p.id,
+                crop:     p.crop,
+                activity: act,
+                status:   isPast ? (Math.random() > 0.5 ? 'Completed' : 'Pending') : 'Scheduled',
+            });
+        });
+    });
+    return plan.sort((a,b) => a.date.localeCompare(b.date));
+}
+
+// ─────────────────────────────────────────────────────────────
+// STORAGE
+// -------------------------------------------------------------
+function loadProfile()       { try { const r=localStorage.getItem(STORAGE_KEY); return r?JSON.parse(r):null; } catch{return null;} }
+function saveProfile(p)      { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
+function resetProfile()      { localStorage.removeItem(STORAGE_KEY); }
+
+// ─────────────────────────────────────────────────────────────
+// ONBOARDING — Step 1: Location
+// -------------------------------------------------------------
+let _gridState = {};
+let _selectedCell = null;
+
+function initOnboarding() {
+    initStep1();
+    initStep2();
+}
+
 function initStep1() {
-    const countryEl  = document.getElementById('ob-country');
-    const provinceEl = document.getElementById('ob-province');
-    const cantonEl   = document.getElementById('ob-canton');
-    const nextBtn    = document.getElementById('ob-next-btn');
-    const badge      = document.getElementById('ob-location-badge');
-    const badgeText  = document.getElementById('ob-location-text');
+    const cEl = document.getElementById('ob-country');
+    const pEl = document.getElementById('ob-province');
+    const kEl = document.getElementById('ob-canton');
+    const nxt = document.getElementById('ob-next-btn');
+    const bdg = document.getElementById('ob-location-badge');
+    const btx = document.getElementById('ob-location-text');
 
-    function updateNext() {
-        const ok = countryEl.value && provinceEl.value && cantonEl.value;
-        nextBtn.disabled = !ok;
-        if (ok) {
-            badge.style.display = 'flex';
-            const cLabel = countryEl.options[countryEl.selectedIndex].text;
-            badgeText.textContent = `${cantonEl.value}, ${provinceEl.value}, ${cLabel}`;
-        } else {
-            badge.style.display = 'none';
-        }
+    function chk() {
+        const ok = cEl.value && pEl.value && kEl.value;
+        nxt.disabled = !ok;
+        bdg.style.display = ok ? 'flex' : 'none';
+        if (ok) btx.textContent = `${kEl.value}, ${pEl.value}, ${cEl.options[cEl.selectedIndex].text}`;
     }
 
-    countryEl.addEventListener('change', () => {
-        const country = countryEl.value;
-        const provinces = country ? Object.keys(LOCATION_DATA[country] || {}) : [];
-
-        provinceEl.innerHTML = '<option value="">Select province...</option>';
-        provinces.sort().forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p; opt.textContent = p;
-            provinceEl.appendChild(opt);
-        });
-        provinceEl.disabled = !provinces.length;
-
-        cantonEl.innerHTML = '<option value="">Select province first...</option>';
-        cantonEl.disabled = true;
-
-        const provField = document.getElementById('ob-province-field');
-        const canField  = document.getElementById('ob-canton-field');
-        provField.classList.toggle('ob-field-disabled', !provinces.length);
-        canField.classList.add('ob-field-disabled');
-        updateNext();
+    cEl.addEventListener('change', () => {
+        const provinces = Object.keys(LOCATION_DATA[cEl.value] || {}).sort();
+        pEl.innerHTML = '<option value="">Select province...</option>';
+        provinces.forEach(p => { const o=document.createElement('option'); o.value=p; o.textContent=p; pEl.appendChild(o); });
+        pEl.disabled = !provinces.length;
+        kEl.innerHTML = '<option value="">Select province first...</option>';
+        kEl.disabled = true;
+        document.getElementById('ob-province-field').classList.toggle('ob-field-disabled', !provinces.length);
+        document.getElementById('ob-canton-field').classList.add('ob-field-disabled');
+        chk();
     });
-
-    provinceEl.addEventListener('change', () => {
-        const country  = countryEl.value;
-        const province = provinceEl.value;
-        const cantons  = province ? (LOCATION_DATA[country]?.[province] || []) : [];
-
-        cantonEl.innerHTML = '<option value="">Select canton...</option>';
-        cantons.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c; opt.textContent = c;
-            cantonEl.appendChild(opt);
-        });
-        cantonEl.disabled = !cantons.length;
-
-        const canField = document.getElementById('ob-canton-field');
-        canField.classList.toggle('ob-field-disabled', !cantons.length);
-        updateNext();
+    pEl.addEventListener('change', () => {
+        const cantons = LOCATION_DATA[cEl.value]?.[pEl.value] || [];
+        kEl.innerHTML = '<option value="">Select canton...</option>';
+        cantons.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; kEl.appendChild(o); });
+        kEl.disabled = !cantons.length;
+        document.getElementById('ob-canton-field').classList.toggle('ob-field-disabled', !cantons.length);
+        chk();
     });
-
-    cantonEl.addEventListener('change', updateNext);
-
-    nextBtn.addEventListener('click', () => {
-        if (nextBtn.disabled) return;
-        // Store partial profile
-        farmProfile = {
-            country:  countryEl.value,
-            country_label: countryEl.options[countryEl.selectedIndex].text,
-            province: provinceEl.value,
-            canton:   cantonEl.value,
+    kEl.addEventListener('change', chk);
+    nxt.addEventListener('click', () => {
+        if (nxt.disabled) return;
+        APP.profile = {
+            country:       cEl.value,
+            country_label: cEl.options[cEl.selectedIndex].text,
+            province:      pEl.value,
+            canton:        kEl.value,
         };
         goToStep2();
     });
 }
 
 function goToStep2() {
-    document.getElementById('ob-step-1').style.display = 'none';
-    document.getElementById('ob-step-2').style.display = 'block';
+    document.getElementById('ob-step-1').style.display='none';
+    document.getElementById('ob-step-2').style.display='block';
     document.getElementById('dot-1').classList.remove('active');
     document.getElementById('dot-2').classList.add('active');
-    renderGrid();
-    // Animate card in
-    document.getElementById('ob-step-2').style.animation = 'none';
-    requestAnimationFrame(() => {
-        document.getElementById('ob-step-2').style.animation = 'ob-fade-up 0.35s ease both';
-    });
+    renderObGrid();
 }
 
-// ─────────────────────────────────────────────────────────────
-// ONBOARDING — STEP 2: Farm Grid
-// -------------------------------------------------------------
-function getRows() { return parseInt(document.getElementById('ob-rows').value) || 2; }
-function getCols() { return parseInt(document.getElementById('ob-cols').value) || 3; }
+// Step 2: Grid
+function obRows() { return Math.min(10, Math.max(1, parseInt(document.getElementById('ob-rows').value)||2)); }
+function obCols() { return Math.min(10, Math.max(1, parseInt(document.getElementById('ob-cols').value)||3)); }
 
-function clampInput(id, min, max) {
-    const el = document.getElementById(id);
-    const v = parseInt(el.value) || min;
-    el.value = Math.min(max, Math.max(min, v));
-}
+function cellId(r,c) { return String.fromCharCode(65+r)+(c+1); }
 
-function renderGrid() {
-    const rows = getRows();
-    const cols = getCols();
-    const grid = document.getElementById('ob-farm-grid');
-    grid.style.gridTemplateColumns = `repeat(${cols}, 72px)`;
-    grid.innerHTML = '';
-
-    // Rebuild gridState preserving existing assignments
-    const newState = {};
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            const id = cellId(r, c);
-            newState[id] = gridState[id] || null;
-        }
-    }
-    gridState = newState;
-
-    Object.entries(gridState).forEach(([id, cropId]) => {
-        const cell = document.createElement('div');
-        cell.className = 'ob-parcel' + (cropId ? ' assigned' : '');
-        cell.dataset.cell = id;
-        cell.setAttribute('role', 'gridcell');
-        cell.setAttribute('aria-label', `Parcel ${id}${cropId ? ': ' + cropById(cropId)?.label : ''}`);
-
-        if (cropId && cropId !== 'empty') {
-            const crop = cropById(cropId);
-            cell.style.background = crop.bg;
-            cell.style.border = `2px solid ${crop.bg}`;
-            cell.innerHTML = `
-                <span class="parcel-icon">${crop.icon}</span>
-                <span class="parcel-id" style="color:${crop.text}">${id}</span>
-                <span class="parcel-crop" style="color:${crop.text}">${crop.label}</span>
-            `;
+function renderObGrid() {
+    const r=obRows(), c=obCols();
+    const g=document.getElementById('ob-farm-grid');
+    g.style.gridTemplateColumns=`repeat(${c},72px)`;
+    g.innerHTML='';
+    const ns={};
+    for(let i=0;i<r;i++) for(let j=0;j<c;j++) { const id=cellId(i,j); ns[id]=_gridState[id]||null; }
+    _gridState=ns;
+    Object.entries(_gridState).forEach(([id,cid])=>{
+        const el=document.createElement('div');
+        el.className='ob-parcel'+(cid?' assigned':'');
+        el.dataset.cell=id;
+        if(cid&&cid!=='empty') {
+            const cr=cropOf(cid);
+            el.style.background=cr.bg; el.style.border=`2px solid ${cr.bg}`;
+            el.innerHTML=`<span class="parcel-icon">${cr.icon}</span><span class="parcel-id" style="color:${cr.tx}">${id}</span><span class="parcel-crop" style="color:${cr.tx}">${cr.label}</span>`;
         } else {
-            cell.innerHTML = `
-                <span class="parcel-id">${id}</span>
-                <i class="fa-solid fa-plus" style="color:rgba(255,255,255,0.2);font-size:0.85rem"></i>
-            `;
+            el.innerHTML=`<span class="parcel-id">${id}</span><i class="fa-solid fa-plus" style="color:rgba(255,255,255,0.2);font-size:.85rem"></i>`;
         }
-
-        cell.addEventListener('click', () => openCropModal(id));
-        grid.appendChild(cell);
+        el.addEventListener('click',()=>openObModal(id));
+        g.appendChild(el);
     });
 }
 
-function openCropModal(cellIdStr) {
-    selectedCell = cellIdStr;
-    document.getElementById('ob-crop-cell-label').textContent = cellIdStr;
-    const modal = document.getElementById('ob-crop-modal');
-    const opts  = document.getElementById('ob-crop-options');
-    const current = gridState[cellIdStr];
-
-    opts.innerHTML = '';
-    CROPS.forEach(crop => {
-        const btn = document.createElement('button');
-        btn.className = 'ob-crop-option' + (crop.id === current ? ' selected' : '');
-        btn.setAttribute('aria-label', crop.label);
-        btn.innerHTML = `<span style="font-size:1.6rem">${crop.icon}</span>${crop.label}`;
-        btn.addEventListener('click', () => {
-            assignCrop(cellIdStr, crop.id === 'empty' ? null : crop.id);
-            closeCropModal();
-        });
-        opts.appendChild(btn);
+function openObModal(id) {
+    _selectedCell=id;
+    document.getElementById('ob-crop-cell-label').textContent=id;
+    const cur=_gridState[id];
+    const opts=document.getElementById('ob-crop-options');
+    opts.innerHTML='';
+    CROPS.forEach(cr=>{
+        const b=document.createElement('button');
+        b.className='ob-crop-option'+(cr.id===cur?' selected':'');
+        b.innerHTML=`<span style="font-size:1.6rem">${cr.icon}</span>${cr.label}`;
+        b.addEventListener('click',()=>{ _gridState[id]=cr.id==='empty'?null:cr.id; closeObModal(); renderObGrid(); });
+        opts.appendChild(b);
     });
-
-    modal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+    document.getElementById('ob-crop-modal').style.display='flex';
+    document.body.style.overflow='hidden';
 }
-
-function closeCropModal() {
-    document.getElementById('ob-crop-modal').style.display = 'none';
-    document.body.style.overflow = '';
-    selectedCell = null;
-}
-
-function assignCrop(cellIdStr, cropId) {
-    gridState[cellIdStr] = cropId;
-    renderGrid();
+function closeObModal() {
+    document.getElementById('ob-crop-modal').style.display='none';
+    document.body.style.overflow='';
+    _selectedCell=null;
 }
 
 function initStep2() {
-    // Number inputs
-    ['rows', 'cols'].forEach(dim => {
-        document.getElementById(`${dim}-dec`).addEventListener('click', () => {
-            const el = document.getElementById(`ob-${dim}`);
-            el.value = Math.max(1, parseInt(el.value) - 1);
-            renderGrid();
+    ['rows','cols'].forEach(dim=>{
+        document.getElementById(`${dim}-dec`).addEventListener('click',()=>{
+            const e=document.getElementById(`ob-${dim}`); e.value=Math.max(1,parseInt(e.value)-1); renderObGrid();
         });
-        document.getElementById(`${dim}-inc`).addEventListener('click', () => {
-            const el = document.getElementById(`ob-${dim}`);
-            el.value = Math.min(10, parseInt(el.value) + 1);
-            renderGrid();
+        document.getElementById(`${dim}-inc`).addEventListener('click',()=>{
+            const e=document.getElementById(`ob-${dim}`); e.value=Math.min(10,parseInt(e.value)+1); renderObGrid();
         });
-        document.getElementById(`ob-${dim}`).addEventListener('change', () => {
-            clampInput(`ob-${dim}`, 1, 10);
-            renderGrid();
-        });
+        document.getElementById(`ob-${dim}`).addEventListener('change',renderObGrid);
     });
-
-    document.getElementById('ob-back-btn').addEventListener('click', () => {
-        document.getElementById('ob-step-2').style.display = 'none';
-        document.getElementById('ob-step-1').style.display = 'block';
+    document.getElementById('ob-back-btn').addEventListener('click',()=>{
+        document.getElementById('ob-step-2').style.display='none';
+        document.getElementById('ob-step-1').style.display='block';
         document.getElementById('dot-1').classList.add('active');
         document.getElementById('dot-2').classList.remove('active');
     });
-
-    document.getElementById('ob-crop-modal-close').addEventListener('click', closeCropModal);
-    document.getElementById('ob-crop-modal').addEventListener('click', e => {
-        if (e.target === e.currentTarget) closeCropModal();
-    });
-
-    document.getElementById('ob-start-btn').addEventListener('click', finishOnboarding);
+    document.getElementById('ob-crop-modal-close').addEventListener('click',closeObModal);
+    document.getElementById('ob-crop-modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeObModal(); });
+    document.getElementById('ob-start-btn').addEventListener('click',finishOnboarding);
 }
 
 async function finishOnboarding() {
-    const rows = getRows();
-    const cols = getCols();
-
-    // Build grid parcels
-    const parcels = Object.entries(gridState)
-        .filter(([, cropId]) => cropId !== null)
-        .map(([id, cropId]) => ({
-            id,
-            crop:    cropId,
-            area_ha: 1.0,
-            status:  'Healthy',
-        }));
-
-    farmProfile = {
-        ...farmProfile,
-        rows,
-        cols,
-        grid: gridState,
-        parcels,
-        setup_date: new Date().toISOString(),
-    };
-
-    // Save locally
-    saveProfile(farmProfile);
-
-    // Show saving indicator
-    const savingMsg = document.getElementById('ob-saving-msg');
-    const startBtn  = document.getElementById('ob-start-btn');
-    startBtn.disabled = true;
-    savingMsg.style.display = 'flex';
-
-    // Attempt to persist to backend via /run (fire-and-forget, non-blocking)
-    try {
-        await persistFarmToBackend(farmProfile);
-    } catch (e) {
-        console.warn('Backend persistence skipped (offline or not running):', e.message);
-    }
-
-    savingMsg.style.display = 'none';
+    const rows=obRows(), cols=obCols();
+    const parcels=Object.entries(_gridState)
+        .filter(([,c])=>c!==null)
+        .map(([id,c])=>({ id, crop:c, area_ha:1.0, status:'Healthy' }));
+    APP.profile = { ...APP.profile, rows, cols, grid:_gridState, parcels, setup_date:new Date().toISOString() };
+    saveProfile(APP.profile);
+    document.getElementById('ob-start-btn').disabled=true;
+    document.getElementById('ob-saving-msg').style.display='flex';
+    try { await persistFarm(APP.profile); } catch(e) { console.warn('Backend save skipped:',e.message); }
+    document.getElementById('ob-saving-msg').style.display='none';
     launchApp();
 }
 
-async function persistFarmToBackend(profile) {
-    const gridJson = JSON.stringify({ rows: profile.rows, cols: profile.cols, parcels: profile.parcels });
-    await fetch('/run', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal:  AbortSignal.timeout(6000),
-        body: JSON.stringify({
-            user_id:     userId,
-            session_id:  sessionId,
-            new_message: {
-                parts: [{ text: `Save my farm grid: ${gridJson}. My location is ${profile.canton}, ${profile.province}, ${profile.country_label}.` }],
-            },
-        }),
-    });
+async function persistFarm(profile) {
+    const body = JSON.stringify({ user_id:APP.userId, session_id:APP.sessionId,
+        new_message:{ parts:[{ text:`Save my farm profile: ${JSON.stringify({ rows:profile.rows, cols:profile.cols, parcels:profile.parcels, location:{ canton:profile.canton, province:profile.province, country:profile.country_label } })}` }] } });
+    await fetch('/run',{ method:'POST', headers:{'Content-Type':'application/json'}, body, signal:AbortSignal.timeout(7000) });
 }
 
 // ─────────────────────────────────────────────────────────────
-// LAUNCH APP (hide onboarding, show main UI)
+// LAUNCH APP
 // -------------------------------------------------------------
 function launchApp() {
-    document.getElementById('onboarding-overlay').style.display = 'none';
-    const app = document.getElementById('main-app');
-    app.style.display = 'grid';
-    app.style.animation = 'ob-fade-up 0.4s ease both';
+    document.getElementById('onboarding-overlay').style.display='none';
+    const app=document.getElementById('main-app');
+    app.style.display='flex';
 
-    applyProfileToUI(farmProfile);
-    loadLogs();
-    renderDashboardGrid(farmProfile);
-}
+    // Apply profile to UI
+    const loc=`${APP.profile.canton}, ${APP.profile.country_label||APP.profile.province}`;
+    document.getElementById('topbar-location-text').textContent=loc;
 
-function applyProfileToUI(profile) {
-    if (!profile) return;
-    const loc = `${profile.canton}, ${profile.province}`;
-    document.getElementById('sidebar-location-text').textContent = loc;
-    document.getElementById('dash-farm-location').textContent = loc;
+    // Seed crop plan from profile if backend offline
+    APP.cropPlan = buildCropPlan(APP.profile);
 
-    // Pre-fill lat/lng from known coords (El Carmen defaults)
-    // Could be extended with the full lookup table
-    const knownCoords = { 'El Carmen': { lat: -0.2687, lng: -79.4326 } };
-    const coords = knownCoords[profile.canton];
-    if (coords) {
-        document.getElementById('lat').value = coords.lat;
-        document.getElementById('lng').value = coords.lng;
-    }
+    // Build synthetic indicators from profile
+    APP.indicators = (APP.profile.parcels||[]).map(p=>({
+        parcel:        p.id,
+        crop:          p.crop,
+        status:        p.status || 'Healthy',
+        pending_action:'None',
+    }));
 
-    // Populate parcel selector in logs tab
-    const parcelSel = document.getElementById('log-parcel');
-    parcelSel.innerHTML = '<option value="">Select parcel...</option>';
-    if (profile.parcels) {
-        profile.parcels.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            const cropLabel = p.crop ? (cropById(p.crop)?.label || p.crop) : 'Empty';
-            opt.textContent = `${p.id} — ${cropLabel}`;
-            parcelSel.appendChild(opt);
-        });
-    }
+    // Render Farm tab
+    renderFarmGrid();
+    renderIndicators_farm();
+    renderCalendar();
+    renderEventsList();
 
-    // Default log date to today
-    document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+    // Render AI tab
+    renderContextBar();
+    renderSuggestions();
 
-    // Dashboard alert
-    const unhealthy = (profile.parcels || []).filter(p => p.status && p.status !== 'Healthy');
-    const alertEl = document.getElementById('dash-alert-desc');
-    if (unhealthy.length) {
-        alertEl.textContent = `${unhealthy.length} parcel(s) require attention: ${unhealthy.map(p => `${p.id} (${p.crop})`).join(', ')}.`;
-    } else {
-        alertEl.textContent = 'All parcels are healthy. Run an Advisory Fusion report for proactive recommendations.';
-    }
+    // Async: fetch real weather
+    const coords=coordsFor(APP.profile.canton);
+    fetchWeatherDirect(coords.lat, coords.lng).then(w=>{
+        APP.weather=w;
+        updateWeatherIndicator();
+    }).catch(()=>{});
 
-    // Dashboard log count
-    document.getElementById('dash-logs').textContent = `${(profile.parcels || []).length} Active`;
-}
-
-function renderDashboardGrid(profile) {
-    const container = document.getElementById('dash-farm-grid');
-    container.innerHTML = '';
-    if (!profile?.parcels?.length) {
-        container.innerHTML = '<span style="color:var(--text-secondary);font-size:0.85rem">No parcels defined.</span>';
-        return;
-    }
-    profile.parcels.forEach(p => {
-        const crop = cropById(p.crop);
-        const pill = document.createElement('div');
-        pill.className = 'dash-parcel' + (crop ? '' : ' empty');
-        if (crop && crop.bg) {
-            pill.style.background = crop.bg;
-            pill.style.color      = crop.text;
+    // Async: fetch top price for main crop
+    const mainCrop = (APP.profile.parcels||[])[0]?.crop || 'cacao';
+    agentRun(`Get market price for ${mainCrop}.`).then(out=>{
+        try {
+            const d=JSON.parse(out);
+            if(d.current_price_usd) {
+                APP.prices[mainCrop]={ price:d.current_price_usd, unit:d.unit, change:d.daily_change_pct, trend:d.trend_direction };
+                updatePriceIndicator(mainCrop);
+            }
+        } catch(e) {
+            // non-JSON response, show placeholder
+            document.getElementById('ind-price-sub').textContent='Data unavailable';
         }
-        pill.textContent = `${p.id} ${crop ? crop.icon + ' ' + crop.label : '—'}`;
-        container.appendChild(pill);
+    }).catch(()=>{ document.getElementById('ind-price-sub').textContent='Offline'; });
+
+    // Deselect handler
+    document.getElementById('btn-deselect')?.addEventListener('click', deselectParcel);
+
+    // Reset button
+    document.getElementById('btn-reset-ob')?.addEventListener('click',()=>{
+        if(confirm('Reset your farm setup? This will clear all onboarding data.')) { resetProfile(); location.reload(); }
     });
 }
-
-// ─────────────────────────────────────────────────────────────
-// INIT — check localStorage for existing profile
-// -------------------------------------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    const existing = loadProfile();
-    if (existing && existing.canton) {
-        farmProfile = existing;
-        launchApp();
-    } else {
-        // Show onboarding
-        initStep1();
-        initStep2();
-    }
-
-    // Reset setup button
-    document.getElementById('btn-reset-onboarding')?.addEventListener('click', () => {
-        if (confirm('This will clear your farm setup and restart the onboarding. Continue?')) {
-            resetProfile();
-            location.reload();
-        }
-    });
-
-    // Mobile sidebar toggle
-    const menuBtn   = document.getElementById('mobile-menu-btn');
-    const sidebar   = document.querySelector('.sidebar');
-    const navOverlay = document.getElementById('mobile-nav-overlay');
-
-    menuBtn?.addEventListener('click', () => {
-        sidebar.classList.toggle('open');
-        navOverlay.classList.toggle('show');
-    });
-    navOverlay?.addEventListener('click', () => {
-        sidebar.classList.remove('open');
-        navOverlay.classList.remove('show');
-    });
-
-    // Navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', e => {
-            e.preventDefault();
-            switchTab(item.getAttribute('data-tab'));
-            sidebar.classList.remove('open');
-            navOverlay.classList.remove('show');
-        });
-    });
-
-    // Image upload
-    setupImageUpload();
-
-    // Vision button
-    document.getElementById('btn-analyze-vision')?.addEventListener('click', runVisionDiagnostic);
-
-    // Weather & Market
-    document.getElementById('btn-fetch-weather')?.addEventListener('click', fetchWeather);
-    document.getElementById('btn-fetch-price')?.addEventListener('click', fetchPrice);
-
-    // Logs
-    document.getElementById('btn-write-log')?.addEventListener('click', writeLog);
-    document.getElementById('btn-refresh-logs')?.addEventListener('click', loadLogs);
-
-    // Advisory
-    document.getElementById('btn-generate-advisory')?.addEventListener('click', generateAdvisory);
-});
 
 // ─────────────────────────────────────────────────────────────
 // TAB SWITCHING
 // -------------------------------------------------------------
 function switchTab(tabId) {
-    document.querySelectorAll('.nav-item').forEach(el => {
-        el.classList.toggle('active', el.getAttribute('data-tab') === tabId);
+    document.querySelectorAll('.main-tab-btn').forEach(b=>{
+        const active=b.dataset.tab===tabId;
+        b.classList.toggle('active',active);
+        b.setAttribute('aria-selected', active?'true':'false');
     });
-    document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-view').forEach(v=>v.classList.remove('active'));
     document.getElementById(`tab-${tabId}`)?.classList.add('active');
-
-    const titles = {
-        'dashboard':      { title: 'Workspace Dashboard',        sub: 'Real-time agricultural metrics & alerts' },
-        'vision':         { title: 'Crop Vision Diagnostic',     sub: 'Multimodal analysis of leaves, soil, and crop conditions' },
-        'weather-market': { title: 'Weather & Markets',          sub: 'Location weather modeling and commodity price feeds' },
-        'logs':           { title: 'Crop Logs Tracker',          sub: 'Historical records and farm activity tracking' },
-        'advisory':       { title: 'Advisory Fusion Studio',     sub: 'Generate 4-signal cross-intelligence reports' },
-    };
-    if (titles[tabId]) {
-        document.getElementById('tab-title').textContent    = titles[tabId].title;
-        document.getElementById('tab-subtitle').textContent = titles[tabId].sub;
-    }
 }
 
 // ─────────────────────────────────────────────────────────────
-// IMAGE UPLOAD
+// INDICATORS — farm-level
 // -------------------------------------------------------------
-let uploadedFileName = null;
+function renderIndicators_farm() {
+    const all    = APP.indicators;
+    const total  = all.length || (APP.profile.parcels||[]).length;
+    const healthy= all.filter(i=>i.status==='Healthy').length;
+    const alerts = all.filter(i=>i.pending_action && i.pending_action!=='None').length;
+    const pct    = total ? healthy/total : 1;
 
-function setupImageUpload() {
-    const dropzone    = document.getElementById('dropzone');
-    const imageUpload = document.getElementById('image-upload');
-    if (!dropzone) return;
+    // Health card
+    document.getElementById('ind-health-val').textContent = total ? `${healthy}/${total}` : '—';
+    document.getElementById('ind-health-sub').textContent = total ? 'parcels OK' : 'No parcels';
+    const hCard = document.getElementById('ind-health');
+    hCard.classList.remove('health-good','health-warn','health-bad');
+    hCard.classList.add(pct>0.8?'health-good':pct>=0.5?'health-warn':'health-bad');
 
-    dropzone.addEventListener('click', () => imageUpload.click());
+    // Alerts card
+    document.getElementById('ind-alerts-val').textContent = String(alerts);
+    document.getElementById('ind-alerts-sub').textContent = alerts ? 'Requires attention' : 'All clear';
+    document.getElementById('ind-alerts').classList.toggle('alerts-warn', alerts>0);
 
-    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.style.borderColor = '#10b981'; });
-    dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = ''; });
-    dropzone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropzone.style.borderColor = '';
-        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    // Next activity
+    updateNextActivityIndicator_farm();
+
+    // Context title
+    document.getElementById('indicators-context-title').textContent = 'Farm Overview';
+    document.getElementById('parcel-selection-bar').style.display='none';
+}
+
+function updateNextActivityIndicator_farm() {
+    const today = new Date().toISOString().split('T')[0];
+    const upcoming = APP.cropPlan.filter(e=>e.date>=today&&e.status!=='Completed').sort((a,b)=>a.date.localeCompare(b.date));
+    if(upcoming.length) {
+        const next=upcoming[0];
+        const daysLeft=Math.ceil((new Date(next.date)-new Date())/(86400000));
+        const crop=cropOf(next.crop);
+        document.getElementById('ind-next-val').textContent = next.activity;
+        document.getElementById('ind-next-sub').textContent =
+            `${crop?crop.icon:''} ${next.parcel} • in ${daysLeft} day${daysLeft!==1?'s':''}`;
+    } else {
+        document.getElementById('ind-next-val').textContent='—';
+        document.getElementById('ind-next-sub').textContent='No upcoming activities';
+    }
+}
+
+// Parcel-level indicators
+function renderIndicators_parcel(parcelId) {
+    const ind  = APP.indicators.find(i=>i.parcel===parcelId) || {};
+    const par  = (APP.profile.parcels||[]).find(p=>p.id===parcelId) || {};
+    const crop = cropOf(par.crop);
+    const status = ind.status || par.status || 'Healthy';
+
+    // Health
+    document.getElementById('ind-health-val').textContent = status;
+    document.getElementById('ind-health-sub').textContent = 'Parcel diagnosis';
+    const hCard=document.getElementById('ind-health');
+    hCard.classList.remove('health-good','health-warn','health-bad');
+    hCard.classList.add(status==='Healthy'?'health-good':status==='Warning'?'health-warn':'health-bad');
+
+    // Alerts
+    const pa = ind.pending_action || 'None';
+    document.getElementById('ind-alerts-val').textContent = pa==='None'?'0':'1';
+    document.getElementById('ind-alerts-sub').textContent = pa==='None'?'No pending actions':pa;
+    document.getElementById('ind-alerts').classList.toggle('alerts-warn', pa!=='None');
+
+    // Next activity for this parcel
+    const today=new Date().toISOString().split('T')[0];
+    const next=APP.cropPlan.filter(e=>e.parcel===parcelId&&e.date>=today&&e.status!=='Completed').sort((a,b)=>a.date.localeCompare(b.date))[0];
+    if(next) {
+        const dl=Math.ceil((new Date(next.date)-new Date())/86400000);
+        document.getElementById('ind-next-val').textContent=next.activity;
+        document.getElementById('ind-next-sub').textContent=`in ${dl} day${dl!==1?'s':''}`;
+    } else {
+        document.getElementById('ind-next-val').textContent='—';
+        document.getElementById('ind-next-sub').textContent='Nothing scheduled';
+    }
+
+    // Price for this parcel's crop
+    if(par.crop && APP.prices[par.crop]) {
+        const pr=APP.prices[par.crop];
+        const arrow=pr.trend==='up'?'▲':pr.trend==='down'?'▼':'—';
+        document.getElementById('ind-price-val').textContent=`$${pr.price}`;
+        document.getElementById('ind-price-sub').textContent=`${arrow} ${pr.change}% • ${pr.unit}`;
+    } else if(par.crop) {
+        document.getElementById('ind-price-val').textContent='—';
+        document.getElementById('ind-price-sub').textContent='Fetching…';
+        agentRun(`Get market price for ${par.crop}.`).then(out=>{
+            try {
+                const d=JSON.parse(out);
+                if(d.current_price_usd) {
+                    APP.prices[par.crop]={ price:d.current_price_usd, unit:d.unit, change:d.daily_change_pct, trend:d.trend_direction };
+                    if(APP.selectedParcel?.id===parcelId) updatePriceIndicator(par.crop);
+                }
+            } catch {}
+        }).catch(()=>{});
+    }
+
+    // Context bar update
+    document.getElementById('indicators-context-title').textContent = `Parcel ${parcelId}`;
+    const bar=document.getElementById('parcel-selection-bar');
+    bar.style.display='flex';
+    document.getElementById('selected-parcel-label').textContent =
+        `${parcelId}${crop?' '+crop.icon+' '+crop.label:''}`;
+}
+
+function updateWeatherIndicator() {
+    if(!APP.weather) return;
+    const w=APP.weather;
+    document.getElementById('ind-weather-val').textContent=`${w.temp}°C`;
+    document.getElementById('ind-weather-sub').textContent=`${w.condition} • ${w.humidity}% RH`;
+}
+
+function updatePriceIndicator(cropId) {
+    const pr=APP.prices[cropId];
+    if(!pr) return;
+    const arrow=pr.trend==='up'?'▲':pr.trend==='down'?'▼':'—';
+    document.getElementById('ind-price-val').textContent=`$${pr.price}`;
+    document.getElementById('ind-price-sub').textContent=`${arrow} ${pr.change}% • ${pr.unit}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// FARM GRID
+// -------------------------------------------------------------
+function renderFarmGrid() {
+    const profile=APP.profile;
+    if(!profile) return;
+    const rows=profile.rows||2, cols=profile.cols||3;
+    const container=document.getElementById('farm-grid-view');
+    container.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+    container.innerHTML='';
+
+    const grid=profile.grid||{};
+    for(let r=0;r<rows;r++) {
+        for(let c=0;c<cols;c++) {
+            const id=cellId(r,c);
+            const cropId=grid[id]||null;
+            const crop=cropId?cropOf(cropId):null;
+            const el=document.createElement('div');
+            el.className='farm-parcel'+(crop?' assigned':'');
+            el.dataset.parcel=id;
+            el.setAttribute('role','gridcell');
+            el.setAttribute('aria-label',`Parcel ${id}${crop?': '+crop.label:''}`);
+            if(crop&&crop.bg) {
+                el.style.background=crop.bg;
+                el.style.border=`2px solid ${crop.bg}`;
+                el.innerHTML=`<span class="fp-id" style="color:${crop.tx}">${id}</span>
+                              <span class="fp-icon">${crop.icon}</span>
+                              <span class="fp-crop" style="color:${crop.tx}">${crop.label}</span>`;
+            } else {
+                el.innerHTML=`<span class="fp-id">${id}</span><span class="fp-empty"><i class="fa-solid fa-plus"></i></span>`;
+            }
+            el.addEventListener('click',()=>selectParcel(id, cropId));
+            container.appendChild(el);
+        }
+    }
+}
+
+function selectParcel(id, cropId) {
+    // Toggle off if same parcel
+    if(APP.selectedParcel?.id===id) { deselectParcel(); return; }
+
+    APP.selectedParcel={ id, crop:cropId };
+
+    // Highlight selected cell
+    document.querySelectorAll('.farm-parcel').forEach(el=>{
+        el.classList.toggle('selected', el.dataset.parcel===id);
     });
-    imageUpload.addEventListener('change', () => {
-        if (imageUpload.files.length) handleFile(imageUpload.files[0]);
+
+    // Switch indicators to parcel view
+    renderIndicators_parcel(id);
+
+    // Filter calendar events
+    renderEventsList();
+
+    // Update AI context bar
+    renderContextBar();
+}
+
+function deselectParcel() {
+    APP.selectedParcel=null;
+    document.querySelectorAll('.farm-parcel').forEach(el=>el.classList.remove('selected'));
+    renderIndicators_farm();
+    renderEventsList();
+    renderContextBar();
+}
+
+// ─────────────────────────────────────────────────────────────
+// CALENDAR
+// -------------------------------------------------------------
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderCalendar() {
+    const d=APP.calDate;
+    const year=d.getFullYear(), month=d.getMonth();
+    document.getElementById('cal-month-label').textContent=`${MONTHS[month]} ${year}`;
+
+    const firstDay=new Date(year,month,1).getDay(); // 0=Sun
+    // Convert to Mon-start: Mon=0 … Sun=6
+    const startOffset=(firstDay+6)%7;
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const daysInPrev=new Date(year,month,0).getDate();
+    const today=new Date();
+
+    // Build events map for this month
+    const eventsMap={};
+    APP.cropPlan.forEach(ev=>{
+        const evd=new Date(ev.date);
+        if(evd.getFullYear()===year&&evd.getMonth()===month) {
+            const key=evd.getDate();
+            if(!eventsMap[key]) eventsMap[key]=[];
+            eventsMap[key].push(ev);
+        }
+    });
+
+    const grid=document.getElementById('cal-days-grid');
+    grid.innerHTML='';
+
+    const totalCells=Math.ceil((startOffset+daysInMonth)/7)*7;
+    for(let i=0;i<totalCells;i++) {
+        let dayNum, inMonth=false;
+        if(i<startOffset) { dayNum=daysInPrev-startOffset+i+1; }
+        else if(i<startOffset+daysInMonth) { dayNum=i-startOffset+1; inMonth=true; }
+        else { dayNum=i-startOffset-daysInMonth+1; }
+
+        const cell=document.createElement('div');
+        cell.className='cal-day'+(inMonth?'':' other-month');
+        const isToday=inMonth&&dayNum===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
+        if(isToday) cell.classList.add('today');
+        const selDay=APP.selectedCalDay;
+        if(selDay&&inMonth&&dayNum===selDay) cell.classList.add('selected-day');
+
+        // Day number
+        const numEl=document.createElement('div');
+        numEl.className='cal-day-num';
+        numEl.textContent=dayNum;
+        cell.appendChild(numEl);
+
+        // Event dots
+        if(inMonth&&eventsMap[dayNum]) {
+            const dots=document.createElement('div');
+            dots.className='cal-dots';
+            // Show up to 3 dots
+            const evs=eventsMap[dayNum].slice(0,3);
+            // If parcel filter active, only show dots for that parcel
+            const filtered=APP.selectedParcel
+                ? evs.filter(e=>e.parcel===APP.selectedParcel.id)
+                : evs;
+            filtered.forEach(ev=>{
+                const dot=document.createElement('span');
+                dot.className='cal-dot';
+                const cr=cropOf(ev.crop);
+                dot.style.background=cr?cr.color:'#56708a';
+                dots.appendChild(dot);
+            });
+            if(dots.children.length) cell.appendChild(dots);
+        }
+
+        if(inMonth) {
+            cell.addEventListener('click',()=>{
+                APP.selectedCalDay = (APP.selectedCalDay===dayNum)?null:dayNum;
+                renderCalendar();
+                renderEventsList();
+                // Scroll to events list
+                document.getElementById('events-list').scrollIntoView({behavior:'smooth',block:'start'});
+            });
+        }
+        grid.appendChild(cell);
+    }
+}
+
+function renderEventsList() {
+    const container=document.getElementById('events-list');
+    const d=APP.calDate;
+    const year=d.getFullYear(), month=d.getMonth();
+    const today=new Date().toISOString().split('T')[0];
+
+    let events=APP.cropPlan.filter(ev=>{
+        const evd=new Date(ev.date);
+        return evd.getFullYear()===year&&evd.getMonth()===month;
+    });
+
+    // Filter by selected parcel
+    if(APP.selectedParcel) events=events.filter(e=>e.parcel===APP.selectedParcel.id);
+
+    // Filter by selected day
+    if(APP.selectedCalDay) events=events.filter(e=>new Date(e.date).getDate()===APP.selectedCalDay);
+
+    if(!events.length) {
+        container.innerHTML=`<div class="events-empty"><i class="fa-solid fa-calendar-xmark" style="margin-bottom:.5rem;font-size:1.5rem;opacity:.3"></i><br>${APP.selectedParcel?`No activities for parcel ${APP.selectedParcel.id} this month`:'No activities scheduled this month'}</div>`;
+        return;
+    }
+
+    events.sort((a,b)=>a.date.localeCompare(b.date));
+    container.innerHTML='';
+    events.forEach(ev=>{
+        const cr=cropOf(ev.crop);
+        const evDate=new Date(ev.date+'T12:00:00');
+        const dateLabel=evDate.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        const isPast=ev.date<today;
+        const isOverdue=isPast&&ev.status!=='Completed';
+
+        const item=document.createElement('div');
+        item.className='event-item';
+        let badge='';
+        if(ev.status==='Completed') badge=`<span class="event-badge badge-done">Done</span>`;
+        else if(isOverdue)           badge=`<span class="event-badge badge-overdue">Overdue</span>`;
+        else if(ev.status==='Pending') badge=`<span class="event-badge badge-pending">Pending</span>`;
+
+        item.innerHTML=`
+            <div class="event-dot" style="background:${cr?cr.color:'#56708a'}"></div>
+            <div class="event-body">
+                <div class="event-date">${dateLabel}</div>
+                <div class="event-activity">${ev.activity}</div>
+                <div class="event-meta">
+                    <span class="event-parcel-tag">${ev.parcel}${cr?' '+cr.icon+' '+cr.label:''}</span>
+                    ${badge}
+                </div>
+            </div>`;
+        container.appendChild(item);
     });
 }
 
-async function handleFile(file) {
-    if (!file.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
+// ─────────────────────────────────────────────────────────────
+// AI ASSISTANT — Context bar + Suggestions
+// -------------------------------------------------------------
+function renderContextBar() {
+    const badge=document.getElementById('ai-context-badge');
+    const hint=document.getElementById('ai-context-hint');
+    const text=document.getElementById('ai-context-text');
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        const preview = document.getElementById('image-preview');
-        preview.src = e.target.result;
-        preview.style.display = 'block';
-        dropzone?.querySelector('.upload-icon')?.style.setProperty('display','none');
-        dropzone?.querySelector('p')?.style.setProperty('display','none');
-    };
-    reader.readAsDataURL(file);
+    if(APP.selectedParcel) {
+        const cr=cropOf(APP.selectedParcel.crop);
+        text.textContent=`${APP.selectedParcel.id}${cr?' '+cr.icon+' '+cr.label:''}`;
+        hint.textContent='Tap Deselect in Farm tab to remove filter';
+    } else {
+        text.textContent='General farm';
+        hint.textContent='Select a parcel in Farm tab for specific advice';
+    }
+}
 
-    uploadedFileName = file.name;
-    const btnAnalyze = document.getElementById('btn-analyze-vision');
-    btnAnalyze.disabled = true;
-    btnAnalyze.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
+function renderSuggestions() {
+    const container=document.getElementById('ai-suggestions');
+    if(!container) return;
+    const sugs=buildSuggestions();
+    container.innerHTML='';
+    sugs.forEach(s=>{
+        const card=document.createElement('button');
+        card.className='suggestion-card';
+        card.innerHTML=`
+            <div class="sug-icon-wrap" style="background:${s.iconBg}">${s.icon}</div>
+            <div class="sug-body">
+                <div class="sug-text">${s.text}</div>
+            </div>
+            <span class="sug-pill pill-${s.category}">${s.category}</span>
+        `;
+        card.addEventListener('click',()=>{
+            const inp=document.getElementById('chat-input');
+            inp.value=s.text;
+            inp.focus();
+            document.getElementById('chat-send-btn').disabled=false;
+        });
+        container.appendChild(card);
+    });
+}
+
+function buildSuggestions() {
+    const sugs=[];
+    const parcels=APP.profile?.parcels||[];
+    const alerted=APP.indicators.filter(i=>i.pending_action&&i.pending_action!=='None');
+    const emptyParcels=parcels.filter(p=>!p.crop||p.crop==='empty');
+    const crops=[...new Set(parcels.map(p=>p.crop).filter(Boolean))];
+    const mainCrop=crops[0]||'cacao';
+
+    if(alerted.length) {
+        const a=alerted[0];
+        sugs.push({ icon:'<i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>',
+            iconBg:'rgba(245,158,11,.12)', category:'alert',
+            text:`Review ${a.pending_action} in parcel ${a.parcel}` });
+    }
+    if(emptyParcels.length) {
+        const ids=emptyParcels.slice(0,2).map(p=>p.id).join(' and ');
+        sugs.push({ icon:'<i class="fa-solid fa-seedling" style="color:#10b981"></i>',
+            iconBg:'rgba(16,185,129,.12)', category:'plan',
+            text:`What can I plant in parcel${emptyParcels.length>1?'s':''} ${ids}?` });
+    }
+    if(crops.length) {
+        sugs.push({ icon:'<i class="fa-solid fa-magnifying-glass" style="color:#a855f7"></i>',
+            iconBg:'rgba(168,85,247,.12)', category:'harvest',
+            text:`Is my ${cropOf(mainCrop)?.label||mainCrop} ready to harvest?` });
+    }
+    sugs.push({ icon:'<i class="fa-solid fa-star" style="color:#a855f7"></i>',
+        iconBg:'rgba(168,85,247,.12)', category:'quality',
+        text:`Analyze the quality of my harvested ${cropOf(mainCrop)?.label||'cacao'}` });
+    sugs.push({ icon:'<i class="fa-solid fa-chart-line" style="color:#38bdf8"></i>',
+        iconBg:'rgba(56,189,248,.12)', category:'market',
+        text:`Is it a good time to sell my ${cropOf(mainCrop)?.label||mainCrop}?` });
+    if(crops.length>1) {
+        sugs.push({ icon:'<i class="fa-solid fa-cloud-sun" style="color:#38bdf8"></i>',
+            iconBg:'rgba(56,189,248,.12)', category:'plan',
+            text:'How will this week\'s weather affect my crops?' });
+    }
+    return sugs.slice(0,6);
+}
+
+// ─────────────────────────────────────────────────────────────
+// CHAT
+// -------------------------------------------------------------
+function addMessage(role, text, imageDataUrl=null) {
+    const area=document.getElementById('chat-messages');
+    // Hide greeting on first user message
+    if(role==='user') {
+        const greet=document.getElementById('ai-greeting');
+        if(greet) greet.style.display='none';
+    }
+
+    const div=document.createElement('div');
+    div.className=`chat-msg ${role}`;
+
+    const avatar=document.createElement('div');
+    avatar.className=`msg-avatar ${role}`;
+    avatar.innerHTML=role==='agent'
+        ?'<i class="fa-solid fa-seedling"></i>'
+        :'<i class="fa-solid fa-user"></i>';
+
+    const bubble=document.createElement('div');
+    bubble.className='msg-bubble';
+
+    if(imageDataUrl) {
+        const img=document.createElement('img');
+        img.src=imageDataUrl; img.className='msg-image'; img.alt='Attached crop photo';
+        bubble.appendChild(img);
+    }
+    const txt=document.createElement('div');
+    txt.innerHTML=role==='agent' ? formatMarkdown(text) : escapeHtml(text);
+    bubble.appendChild(txt);
+
+    div.appendChild(avatar);
+    div.appendChild(bubble);
+    area.appendChild(div);
+    area.scrollTop=area.scrollHeight;
+    APP.messages.push({role, text, imageDataUrl});
+    return div;
+}
+
+function addTypingIndicator() {
+    const area=document.getElementById('chat-messages');
+    const div=document.createElement('div');
+    div.className='chat-msg agent'; div.id='typing-indicator';
+    div.innerHTML=`<div class="msg-avatar agent"><i class="fa-solid fa-seedling"></i></div>
+        <div class="msg-bubble"><div class="typing-indicator">
+            <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+        </div></div>`;
+    area.appendChild(div);
+    area.scrollTop=area.scrollHeight;
+    return div;
+}
+
+function removeTypingIndicator() {
+    document.getElementById('typing-indicator')?.remove();
+}
+
+async function sendMessage() {
+    const input=document.getElementById('chat-input');
+    const sendBtn=document.getElementById('chat-send-btn');
+    const text=input.value.trim();
+    if(!text&&!APP.pendingImage) return;
+
+    const imgDataUrl=APP.pendingImage?.dataUrl||null;
+    addMessage('user', text||'[Photo attached]', imgDataUrl);
+    input.value=''; sendBtn.disabled=true;
+    clearImageAttachment();
+
+    const typing=addTypingIndicator();
+
+    // Build context string
+    let contextParts=[text];
+    if(APP.selectedParcel) {
+        const cr=cropOf(APP.selectedParcel.crop);
+        contextParts.push(`[Context: parcel ${APP.selectedParcel.id}, crop: ${cr?.label||APP.selectedParcel.crop}]`);
+    }
+    const fullMessage=contextParts.join(' ');
 
     try {
-        const b64Reader = new FileReader();
-        b64Reader.onloadend = async () => {
-            const base64Data = b64Reader.result.split(',')[1];
-            const res = await fetch(`/apps/croppulse-ai/users/${userId}/sessions/${sessionId}/artifacts`, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: file.name, artifact: { inline_data: { data: base64Data, mime_type: file.type } } }),
+        const response=await agentRun(fullMessage);
+        removeTypingIndicator();
+        const msgEl=addMessage('agent', response);
+
+        // Extract [INDICATORS] and silently update dashboard
+        const indMatch=response.match(/\[INDICATORS\]\s*(\{[\s\S]+?\})/);
+        if(indMatch) {
+            try {
+                const inds=JSON.parse(indMatch[1]);
+                if(inds.parcels) {
+                    inds.parcels.forEach(p=>{
+                        const existing=APP.indicators.findIndex(i=>i.parcel===p.parcel);
+                        if(existing>=0) APP.indicators[existing]={...APP.indicators[existing],...p};
+                        else APP.indicators.push(p);
+                    });
+                    renderIndicators_farm();
+                }
+                if(inds.weather) { APP.weather=inds.weather; updateWeatherIndicator(); }
+                if(inds.price&&inds.crop) { APP.prices[inds.crop]=inds; updatePriceIndicator(inds.crop); }
+            } catch {}
+        }
+
+        // Follow-up pills
+        const pills=generateFollowUps(response, fullMessage);
+        if(pills.length) {
+            const pillRow=document.createElement('div');
+            pillRow.className='chat-msg agent';
+            pillRow.style.paddingLeft='42px';
+            const pw=document.createElement('div');
+            pw.className='followup-pills';
+            pills.forEach(p=>{
+                const btn=document.createElement('button');
+                btn.className='followup-pill'; btn.textContent=p;
+                btn.addEventListener('click',()=>{
+                    const inp=document.getElementById('chat-input');
+                    inp.value=p; inp.focus();
+                    document.getElementById('chat-send-btn').disabled=false;
+                });
+                pw.appendChild(btn);
             });
-            if (res.ok) {
-                btnAnalyze.disabled = false;
-                btnAnalyze.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Run Diagnostic';
-            } else { throw new Error('Upload failed.'); }
-        };
-        b64Reader.readAsDataURL(file);
-    } catch (err) {
-        console.error('Artifact upload:', err);
-        btnAnalyze.disabled = false;
-        btnAnalyze.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Run Diagnostic';
+            pillRow.appendChild(pw);
+            document.getElementById('chat-messages').appendChild(pillRow);
+            document.getElementById('chat-messages').scrollTop=999999;
+        }
+    } catch(err) {
+        removeTypingIndicator();
+        addMessage('agent', `Sorry, I had trouble connecting. Please try again.\n\n*${err.message}*`);
     }
 }
 
+function generateFollowUps(response, question) {
+    const pills=[];
+    const lower=response.toLowerCase();
+    if(lower.includes('fertiliz')) pills.push('What fertiliser should I use?');
+    if(lower.includes('disease')||lower.includes('fungus')||lower.includes('pest'))
+        pills.push('How do I treat this organically?');
+    if(lower.includes('harvest')||lower.includes('maturity'))
+        pills.push('What is the best time to harvest?');
+    if(lower.includes('price')||lower.includes('market')||lower.includes('sell'))
+        pills.push('Who are the best buyers near me?');
+    if(lower.includes('weather')||lower.includes('rain'))
+        pills.push('Show me the 7-day forecast');
+    if(!pills.length) {
+        pills.push('Tell me more');
+        pills.push('What should I do first?');
+    }
+    return pills.slice(0,3);
+}
+
 // ─────────────────────────────────────────────────────────────
-// AGENT CALLS
+// IMAGE ATTACHMENT
 // -------------------------------------------------------------
-async function agentRun(messageText) {
-    const res = await fetch('/run', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, session_id: sessionId, new_message: { parts: [{ text: messageText }] } }),
+function clearImageAttachment() {
+    APP.pendingImage=null;
+    document.getElementById('chat-img-preview-bar').style.display='none';
+    document.getElementById('chat-img-thumb').src='';
+    document.getElementById('chat-image-input').value='';
+}
+
+function attachImage(file) {
+    if(!file||!file.type.startsWith('image/')) return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+        APP.pendingImage={ dataUrl:e.target.result, mimeType:file.type };
+        document.getElementById('chat-img-thumb').src=e.target.result;
+        document.getElementById('chat-img-preview-bar').style.display='flex';
+        document.getElementById('chat-send-btn').disabled=false;
+    };
+    reader.readAsDataURL(file);
+}
+
+// ─────────────────────────────────────────────────────────────
+// WEATHER (direct Open-Meteo, no key required)
+// -------------------------------------------------------------
+async function fetchWeatherDirect(lat, lng) {
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,weather_code&timezone=auto`;
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('Weather fetch failed');
+    const d=await res.json();
+    const cur=d.current;
+    return {
+        temp:     Math.round(cur.temperature_2m),
+        humidity: cur.relative_humidity_2m,
+        condition:WMO[cur.weather_code]||'Unknown',
+    };
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADK AGENT CALL  (POST /run)
+// -------------------------------------------------------------
+async function agentRun(text) {
+    const res=await fetch('/run',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        signal:AbortSignal.timeout(30000),
+        body:JSON.stringify({
+            user_id:APP.userId, session_id:APP.sessionId,
+            new_message:{ parts:[{text}] },
+        }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if(!res.ok) throw new Error(`Agent HTTP ${res.status}`);
     return extractFinalOutput(await res.json());
 }
 
-async function runVisionDiagnostic() {
-    const mode      = document.getElementById('vision-mode').value;
-    const resultDiv = document.getElementById('vision-result');
-    const phDiv     = document.getElementById('vision-placeholder');
-    phDiv.style.display    = 'none';
-    resultDiv.style.display = 'block';
-    resultDiv.innerHTML     = spinner('Analyzing crop health...');
-    try {
-        const output = await agentRun(`Analyze my crop image using ${mode} mode.`);
-        resultDiv.innerHTML = `<div class="formatted-output">${formatMarkdown(output)}</div>`;
-    } catch (err) {
-        resultDiv.innerHTML = errorHtml(err.message);
-    }
-}
-
-async function fetchWeather() {
-    const lat       = document.getElementById('lat').value;
-    const lng       = document.getElementById('lng').value;
-    const resultDiv = document.getElementById('wm-result');
-    document.getElementById('wm-placeholder').style.display = 'none';
-    resultDiv.style.display = 'block';
-    resultDiv.innerHTML     = spinner('Querying Open-Meteo...');
-    try {
-        const output = await agentRun(`Get weather forecast for latitude ${lat} and longitude ${lng}.`);
-        resultDiv.innerHTML = `<div class="formatted-output">${formatMarkdown(output)}</div>`;
-        // Update dashboard widget
-        try {
-            const parsed = JSON.parse(output);
-            const temp = parsed?.current_weather?.temperature_celsius;
-            if (temp != null) {
-                document.getElementById('dash-weather').textContent = `${temp}°C`;
-                document.getElementById('dash-weather-sub').textContent = parsed?.current_weather?.weather_condition || '';
-            }
-        } catch {}
-    } catch (err) {
-        resultDiv.innerHTML = errorHtml(err.message);
-    }
-}
-
-async function fetchPrice() {
-    const commodity = document.getElementById('crop-commodity').value;
-    const resultDiv = document.getElementById('wm-result');
-    document.getElementById('wm-placeholder').style.display = 'none';
-    resultDiv.style.display = 'block';
-    resultDiv.innerHTML     = spinner('Fetching commodity ticker...');
-    try {
-        const output = await agentRun(`What is the crop market price for ${commodity}?`);
-        resultDiv.innerHTML = `<div class="formatted-output">${formatMarkdown(output)}</div>`;
-        try {
-            const parsed = JSON.parse(output);
-            if (parsed.current_price_usd) {
-                document.getElementById('dash-price').textContent = `$${parsed.current_price_usd} / ${parsed.unit}`;
-                document.getElementById('dash-price-sub').textContent =
-                    `${parsed.trend_direction === 'up' ? '▲' : parsed.trend_direction === 'down' ? '▼' : '—'} ${parsed.daily_change_pct}% today`;
-            }
-        } catch {}
-    } catch (err) {
-        resultDiv.innerHTML = errorHtml(err.message);
-    }
-}
-
-async function writeLog() {
-    const parcel   = document.getElementById('log-parcel').value;
-    const activity = document.getElementById('log-activity').value.trim();
-    const status   = document.getElementById('log-status').value;
-    const date     = document.getElementById('log-date').value;
-
-    if (!parcel || !activity) { alert('Please fill in Parcel and Activity fields.'); return; }
-
-    const btn = document.getElementById('btn-write-log');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
-
-    try {
-        await agentRun(`Log activity for parcel ${parcel}: ${activity}. Status: ${status}. Date: ${date}.`);
-        document.getElementById('log-activity').value = '';
-        loadLogs();
-    } catch (err) {
-        alert(`Failed to log: ${err.message}`);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-file-pen"></i> Submit Log Entry';
-    }
-}
-
-async function generateAdvisory() {
-    const resultDiv = document.getElementById('advisory-result');
-    resultDiv.innerHTML = spinner('Fusing 4 signals: weather, market prices, vision inspection, and farm history...');
-    try {
-        const output = await agentRun('Generate a crop advisory recommendation fusion report.');
-        resultDiv.innerHTML = `<div class="formatted-output">${formatMarkdown(output)}</div>`;
-    } catch (err) {
-        resultDiv.innerHTML = errorHtml(err.message);
-    }
-}
-
-async function loadLogs() {
-    const container = document.getElementById('logs-container');
-    if (!container) return;
-    container.innerHTML = spinner('Loading activity logs...');
-
-    try {
-        const output = await agentRun('Read the crop activity plan and indicators.');
-        let logs = [];
-        try { logs = JSON.parse(output); } catch {}
-        if (!Array.isArray(logs) || !logs.length) {
-            // Show profile-based plan if available
-            if (farmProfile?.parcels?.length) {
-                logs = farmProfile.parcels.map(p => ({
-                    date:     new Date().toISOString().split('T')[0],
-                    parcel:   p.id,
-                    activity: `Initial parcel setup — ${cropById(p.crop)?.label || p.crop}`,
-                    status:   'Pending',
-                }));
-            } else {
-                container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:2rem">No activity logs found.</div>';
-                return;
-            }
+function extractFinalOutput(events) {
+    if(!Array.isArray(events)||!events.length) return 'No response from agent.';
+    for(let i=events.length-1;i>=0;i--) {
+        const ev=events[i];
+        if(ev?.content?.parts) {
+            const t=ev.content.parts.filter(p=>p.text).map(p=>p.text).join('\n');
+            if(t) return t;
         }
-        container.innerHTML = '';
-        [...logs].reverse().forEach(log => {
-            const item = document.createElement('div');
-            item.className = 'log-item';
-            item.innerHTML = `
-                <div class="log-meta">
-                    <span class="log-tag">${log.parcel || 'Farm'}</span>
-                    <span>${log.date || 'Today'}</span>
-                </div>
-                <div class="log-title">${log.activity || log.action || 'Activity'}</div>
-                <div class="log-notes">${log.status || 'Pending'}</div>
-            `;
-            container.appendChild(item);
-        });
-        document.getElementById('dash-logs').textContent = `${logs.length} Active`;
-    } catch (err) {
-        container.innerHTML = `<div style="color:#ef4444;padding:1rem">Failed to load logs: ${err.message}</div>`;
+        if(ev?.output) return typeof ev.output==='object'?JSON.stringify(ev.output,null,2):String(ev.output);
     }
+    return 'No response found.';
 }
 
 // ─────────────────────────────────────────────────────────────
 // UTILITIES
 // -------------------------------------------------------------
-function extractFinalOutput(events) {
-    if (!events?.length) return 'No response from agent.';
-    for (let i = events.length - 1; i >= 0; i--) {
-        const ev = events[i];
-        if (ev.content?.parts) {
-            const text = ev.content.parts.filter(p => p.text).map(p => p.text).join('\n');
-            if (text) return text;
-        }
-        if (ev.output) return typeof ev.output === 'object' ? JSON.stringify(ev.output, null, 2) : String(ev.output);
-    }
-    return 'No text response found.';
-}
-
 function formatMarkdown(text) {
-    if (!text) return '';
+    if(!text) return '';
     return text
-        .replace(/^### (.*$)/gim, '<h4 style="margin:1rem 0 0.5rem;color:#10b981">$1</h4>')
-        .replace(/^## (.*$)/gim,  '<h3 style="margin:1.4rem 0 0.6rem;color:#f0f4f8;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:0.25rem">$1</h3>')
-        .replace(/^# (.*$)/gim,   '<h2 style="margin:1.75rem 0 0.9rem;color:#fff">$1</h2>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#fff;font-weight:600">$1</strong>')
-        .replace(/^\s*[\*\-]\s+(.*$)/gim, '<li style="margin-left:1.25rem;margin-bottom:0.4rem;color:#8aa0b8">$1</li>')
-        .replace(/\n/g, '<br>');
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/^### (.+)$/gm,'<strong style="display:block;margin:.7rem 0 .3rem;color:#10b981">$1</strong>')
+        .replace(/^## (.+)$/gm,'<strong style="display:block;margin:1rem 0 .4rem;font-size:1.05rem">$1</strong>')
+        .replace(/^# (.+)$/gm,'<strong style="display:block;margin:1.2rem 0 .5rem;font-size:1.1rem">$1</strong>')
+        .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g,'<em>$1</em>')
+        .replace(/`(.+?)`/g,'<code style="background:rgba(255,255,255,.07);padding:.1em .3em;border-radius:3px;font-size:.9em">$1</code>')
+        .replace(/^\s*[-*]\s+(.+)$/gm,'<li style="margin-left:1.1rem;margin-bottom:.25rem;color:#8aa0b8">$1</li>')
+        .replace(/\n/g,'<br>');
 }
 
-function spinner(msg = 'Loading...') {
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:2.5rem;color:var(--text-secondary)">
-        <i class="fa-solid fa-spinner fa-spin fa-2x" style="color:#10b981"></i>
-        <p style="font-size:0.92rem">${msg}</p>
-    </div>`;
+function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function errorHtml(msg) {
-    return `<div style="color:#ef4444;padding:1rem;display:flex;gap:0.6rem;align-items:center">
-        <i class="fa-solid fa-circle-exclamation"></i> ${msg}
-    </div>`;
-}
+// ─────────────────────────────────────────────────────────────
+// DOM READY — BOOT
+// -------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ── Check for existing profile ───────────────────────────
+    const existing=loadProfile();
+    if(existing?.canton) {
+        APP.profile=existing;
+        launchApp();
+    } else {
+        document.getElementById('onboarding-overlay').style.display='flex';
+        initOnboarding();
+    }
+
+    // ── Tab switching ────────────────────────────────────────
+    document.querySelectorAll('.main-tab-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>switchTab(btn.dataset.tab));
+    });
+
+    // ── Calendar nav ─────────────────────────────────────────
+    document.getElementById('cal-prev')?.addEventListener('click',()=>{
+        APP.calDate.setMonth(APP.calDate.getMonth()-1);
+        APP.selectedCalDay=null;
+        renderCalendar(); renderEventsList();
+    });
+    document.getElementById('cal-next')?.addEventListener('click',()=>{
+        APP.calDate.setMonth(APP.calDate.getMonth()+1);
+        APP.selectedCalDay=null;
+        renderCalendar(); renderEventsList();
+    });
+
+    // ── Chat: input + send ───────────────────────────────────
+    const chatInput=document.getElementById('chat-input');
+    const sendBtn=document.getElementById('chat-send-btn');
+    chatInput?.addEventListener('input',()=>{
+        sendBtn.disabled=!chatInput.value.trim()&&!APP.pendingImage;
+    });
+    chatInput?.addEventListener('keydown',e=>{
+        if(e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    sendBtn?.addEventListener('click',sendMessage);
+
+    // ── Chat: camera button ──────────────────────────────────
+    document.getElementById('chat-camera-btn')?.addEventListener('click',()=>{
+        document.getElementById('chat-image-input')?.click();
+    });
+    document.getElementById('chat-image-input')?.addEventListener('change',e=>{
+        if(e.target.files[0]) attachImage(e.target.files[0]);
+    });
+    document.getElementById('chat-img-remove')?.addEventListener('click',()=>{
+        clearImageAttachment();
+        const inp=document.getElementById('chat-input');
+        sendBtn.disabled=!inp.value.trim();
+    });
+});
