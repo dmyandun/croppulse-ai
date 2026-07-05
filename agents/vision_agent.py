@@ -91,7 +91,7 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
 
     try:
         response = client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-2.5-flash",
             contents=[
                 img_part,
                 (
@@ -111,7 +111,7 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
 
 vision_agent = Agent(
     name="vision_agent",
-    model=Gemini(model="gemini-3.5-flash"),
+    model=Gemini(model="gemini-2.5-flash"),
     instruction=(
         "You are the Vision Agent for CropPulse AI. You analyze farm images using 7 specialized modes. "
         "You receive the mode from the Router Agent and the farm context (which crop is in the selected parcel).\n\n"

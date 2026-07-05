@@ -441,6 +441,13 @@ async def security_input_validation(ctx, node_input: str) -> str:
         # stripping fails.  Log the error and continue.
         logger.warning("security_input: image processing error (non-fatal): %s", exc)
 
+    # Preserve the original user question so downstream nodes (specifically the
+    # Advisory Agent) can honour it verbatim instead of relying on the router's
+    # JSON classification. Onboarding payloads ("Save my farm profile:") are
+    # excluded — those are not conversational questions.
+    if not text.startswith("Save my farm profile:"):
+        ctx.state["user_message"] = text
+
     # Return the sanitized text.  The workflow graph will pass this to the
     # sheets_read_node and then to the Router Agent.
     return text
@@ -471,6 +478,18 @@ def security_output_validation(ctx, node_input: str) -> str:
     """
     text = str(node_input)
     warnings_appended: list[str] = []
+
+    # ── 0. STRIP INTERNAL [INDICATORS] JSON BLOCK ───────────────────────────
+    # The Advisory Agent emits a `[INDICATORS]: { ... }` block that the Sheets
+    # writer consumes upstream in this workflow. It is machine metadata and
+    # must never reach the farmer. We remove it (and any surrounding fenced
+    # code block) before the response is returned.
+    text = re.sub(
+        r"`{0,3}(?:json)?\s*\[INDICATORS\]\s*:?\s*\{.*?\}\s*`{0,3}\s*$",
+        "",
+        text,
+        flags=re.DOTALL,
+    ).rstrip()
 
     # ── 1. DANGEROUS AGROCHEMICAL DOSAGE FILTER ───────────────────────────────
     # The Advisory Agent may hallucinate chemical application rates drawn from

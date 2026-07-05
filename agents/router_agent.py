@@ -18,7 +18,7 @@ from google.adk.models import Gemini
 
 router_agent = Agent(
     name="router_agent",
-    model=Gemini(model="gemini-3.5-flash"),
+    model=Gemini(model="gemini-2.5-flash"),
     instruction=(
         "You are the Router Agent for CropPulse AI, a farming assistant for Latin American smallholder farmers. "
         "Your job is to classify the user's intent based on their message and any attached image.\n\n"

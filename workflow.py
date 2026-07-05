@@ -153,6 +153,7 @@ def compile_advisory_input(ctx: Context, node_input: str) -> str:
     weather_out = ctx.state.get("weather_output", "No weather data retrieved.")
     market_out = ctx.state.get("market_output", "No market price data retrieved.")
     farm_context = ctx.state.get("farm_context", "No farm context available.")
+    user_message = ctx.state.get("user_message", "").strip()
 
     # Pretty-print JSON signals if they are valid JSON blobs
     def _fmt(raw: str) -> str:
@@ -161,13 +162,30 @@ def compile_advisory_input(ctx: Context, node_input: str) -> str:
         except Exception:
             return raw
 
+    # Extract the real parcel roster from the farm grid so the Advisory Agent
+    # can be grounded and cannot invent parcel IDs like "A1/B2/C2".
+    valid_parcels: list[str] = []
+    try:
+        fc = json.loads(farm_context) if isinstance(farm_context, str) else farm_context
+        for p in (fc.get("farm_grid", {}) or {}).get("parcels", []) or []:
+            pid = p.get("id")
+            crop = p.get("crop", "unknown")
+            if pid:
+                valid_parcels.append(f"{pid} ({crop})")
+    except Exception:
+        pass
+    parcel_roster = ", ".join(valid_parcels) if valid_parcels else "none registered"
+
     prompt = (
+        f"USER QUESTION (answer THIS, verbatim in intent):\n{user_message or '[no user question provided]'}\n\n"
+        f"VALID PARCELS ON THIS FARM (the ONLY parcel IDs and crops you may reference): {parcel_roster}\n\n"
         "Input Signals for Cross-Signal Intelligence Fusion:\n\n"
         f"1. VISION ASSESSMENT:\n{vision_out}\n\n"
         f"2. WEATHER DATA (current + 7-day forecast + historical rain):\n{_fmt(weather_out)}\n\n"
         f"3. MARKET PRICES (spot + 30-day trend for all farm crops):\n{_fmt(market_out)}\n\n"
         f"4. FARM CONTEXT (profile, grid, crop plan, indicators):\n{_fmt(farm_context)}\n\n"
-        "Generate the comprehensive cross-signal advisory recommendation report."
+        "Now respond. If the USER QUESTION is a simple, direct question, answer it conversationally in 1-4 sentences using ONLY the valid parcels listed above — do NOT use the OBSERVATION/CONTEXT/ACTION template and do NOT emit an [INDICATORS] block. "
+        "Only use the full template + [INDICATORS] block when the user explicitly asked for a comprehensive farm audit, general advice, or a diagnostic assessment of the whole farm."
     )
     return prompt
 
