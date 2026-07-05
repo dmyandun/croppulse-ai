@@ -522,10 +522,17 @@ function initStep2() {
         document.getElementById('ob-crop-screen-details').style.display = 'none';
     });
 
-    // Phase 17: photo capture is offered for every parcel during onboarding,
-    // regardless of cycle selection. Kept as an always-visible optional field.
+    // Phase 19: photo capture is only offered when the user picks
+    // "I don't know" as the growth cycle. Vision analysis then runs once
+    // during onboarding to identify the stage automatically.
+    const cycleSelect = document.getElementById('ob-crop-cycle');
     const photoGroup = document.getElementById('ob-crop-photo-group');
-    if (photoGroup) photoGroup.style.display = 'block';
+    const applyPhotoVisibility = () => {
+        if (!photoGroup || !cycleSelect) return;
+        photoGroup.style.display = cycleSelect.value === 'unknown' ? 'block' : 'none';
+    };
+    cycleSelect?.addEventListener('change', applyPhotoVisibility);
+    applyPhotoVisibility();
 
     const photoBtn = document.getElementById('ob-crop-photo-btn');
     const photoInput = document.getElementById('ob-crop-photo-input');
@@ -711,16 +718,20 @@ async function finishOnboarding() {
 }
 
 async function analyzeOnboardingPhotos() {
-    const parcelsWithPhotos = (APP.profile?.parcels || []).filter(p => p && p.photo);
-    if (!parcelsWithPhotos.length) return;
+    // Phase 19: only parcels the farmer marked as "I don't know" (cycle=unknown)
+    // AND that carry a photo get sent through vision. This runs exactly once,
+    // at the end of onboarding — never on grid clicks or re-renders.
+    const targets = (APP.profile?.parcels || []).filter(p => p && p.photo && p.cycle === 'unknown');
+    if (!targets.length) return;
     APP.chatSeed = APP.chatSeed || [];
-    for (const p of parcelsWithPhotos) {
+    let profileDirty = false;
+    for (const p of targets) {
         try {
             const mimeMatch = /^data:([^;]+);base64,/.exec(p.photo);
             const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
             const data = p.photo.split(',')[1];
             if (!data) continue;
-            const prompt = `Identify the crop and its growth stage from the attached photo. The farmer declared this parcel (${p.id}) as ${p.crop || 'unknown'} at ${p.cycle || 'unknown'} stage. Confirm the identification or suggest a correction, in 1-3 sentences.`;
+            const prompt = `Identify the crop and its growth stage from the attached photo. Parcel ${p.id} was declared as "${p.crop || 'unknown'}" with an unknown growth stage. Return the identified crop and one of {seedling, vegetative, flowering_fruiting, harvesting}. Emit an [INDICATORS] block with a "crop_updates" entry so the dashboard is corrected.`;
             const res = await fetch('/run', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -740,17 +751,50 @@ async function analyzeOnboardingPhotos() {
             if (!res.ok) continue;
             const events = await res.json();
             const text = extractFinalOutput(events);
-            APP.chatSeed.push({
-                role: 'agent',
-                text: `📸 Photo analysis for parcel ${p.id}:\n\n${text}`,
-            });
-            // If user is currently on the AI tab, surface the result right away.
+
+            // Parse an [INDICATORS] block, if present, and back-fill the parcel.
+            const indMatch = text.match(/\[INDICATORS\]\s*:?\s*(\{[\s\S]+?\})/);
+            if (indMatch) {
+                try {
+                    const inds = JSON.parse(indMatch[1]);
+                    if (Array.isArray(inds.crop_updates)) {
+                        inds.crop_updates.forEach(u => {
+                            if (u.parcel !== p.id) return;
+                            const pIdx = APP.profile.parcels.findIndex(pp => pp.id === u.parcel);
+                            if (pIdx >= 0) {
+                                if (u.crop) APP.profile.parcels[pIdx].crop = u.crop;
+                                if (u.cycle) APP.profile.parcels[pIdx].cycle = u.cycle;
+                            }
+                            APP.profile.grid = APP.profile.grid || {};
+                            const cur = APP.profile.grid[u.parcel];
+                            if (typeof cur === 'object' && cur) {
+                                if (u.crop) cur.crop = u.crop;
+                                if (u.cycle) cur.cycle = u.cycle;
+                            } else {
+                                APP.profile.grid[u.parcel] = { crop: u.crop || (cur || 'unknown'), cycle: u.cycle || 'vegetative', photo: p.photo };
+                            }
+                            profileDirty = true;
+                        });
+                    }
+                } catch { /* ignore malformed indicators */ }
+            }
+
+            // Strip the [INDICATORS] block from the visible chat message.
+            const visible = text.replace(/\[INDICATORS\][\s\S]*$/, '').trim() || text;
+            const msg = `📸 Parcel ${p.id} — vision analysis:\n\n${visible}`;
+            APP.chatSeed.push({ role: 'agent', text: msg });
             if (document.getElementById('tab-ai')?.classList.contains('active')) {
-                addMessage('agent', `📸 Photo analysis for parcel ${p.id}:\n\n${text}`);
+                addMessage('agent', msg);
             }
         } catch (e) {
             console.warn(`Photo analysis for ${p.id} failed:`, e.message);
         }
+    }
+
+    if (profileDirty) {
+        saveProfile(APP.profile);
+        try { renderFarmGrid(); } catch {}
+        try { await persistProfileUpdate(); } catch {}
     }
 }
 
@@ -894,49 +938,10 @@ function launchApp() {
     // Deselect handler
     document.getElementById('btn-deselect')?.addEventListener('click', deselectParcel);
 
-    // Phase 17 — grid dimension controls
-    document.getElementById('grid-add-row-btn')?.addEventListener('click', () => {
-        APP.profile.rows = Math.min(10, (APP.profile.rows || 2) + 1);
-        saveProfile(APP.profile);
-        renderFarmGrid();
-        persistProfileUpdate();
-    });
-    document.getElementById('grid-add-col-btn')?.addEventListener('click', () => {
-        APP.profile.cols = Math.min(10, (APP.profile.cols || 3) + 1);
-        saveProfile(APP.profile);
-        renderFarmGrid();
-        persistProfileUpdate();
-    });
-    document.getElementById('grid-remove-row-btn')?.addEventListener('click', () => {
-        if ((APP.profile.rows || 2) <= 1) return;
-        const newRows = APP.profile.rows - 1;
-        // Drop parcels from the removed row so they don't linger in state.
-        const removedRow = String.fromCharCode(65 + newRows);
-        APP.profile.grid = APP.profile.grid || {};
-        Object.keys(APP.profile.grid).forEach(k => {
-            if (k.startsWith(removedRow)) delete APP.profile.grid[k];
-        });
-        APP.profile.parcels = (APP.profile.parcels || []).filter(p => !p.id.startsWith(removedRow));
-        APP.profile.rows = newRows;
-        saveProfile(APP.profile);
-        renderFarmGrid();
-        persistProfileUpdate();
-    });
-    document.getElementById('grid-remove-col-btn')?.addEventListener('click', () => {
-        if ((APP.profile.cols || 3) <= 1) return;
-        const newCols = APP.profile.cols - 1;
-        const removedIdx = newCols + 1;
-        APP.profile.grid = APP.profile.grid || {};
-        Object.keys(APP.profile.grid).forEach(k => {
-            const col = parseInt(k.slice(1), 10);
-            if (col === removedIdx) delete APP.profile.grid[k];
-        });
-        APP.profile.parcels = (APP.profile.parcels || []).filter(p => parseInt(p.id.slice(1), 10) !== removedIdx);
-        APP.profile.cols = newCols;
-        saveProfile(APP.profile);
-        renderFarmGrid();
-        persistProfileUpdate();
-    });
+    // Phase 19: +Row/+Column controls removed. The single trailing "+"
+    // cell rendered by renderFarmGrid is now the only affordance for adding
+    // parcels — it respects the user's chosen column count and flows into a
+    // new row automatically.
 
     // Reset button
     document.getElementById('btn-reset-ob')?.addEventListener('click',()=>{
@@ -1090,46 +1095,81 @@ function updatePriceIndicator(cropId) {
 function renderFarmGrid() {
     const profile=APP.profile;
     if(!profile) return;
-    const rows=profile.rows||2, cols=profile.cols||3;
+    const cols=profile.cols||2;
     const container=document.getElementById('farm-grid-view');
     container.style.gridTemplateColumns=`repeat(${cols},1fr)`;
     container.innerHTML='';
 
-    const grid=profile.grid||{};
-    for(let r=0;r<rows;r++) {
-        for(let c=0;c<cols;c++) {
-            const id=cellId(r,c);
-            const cell=grid[id]||null;
-            const cropId=(typeof cell==='object'&&cell)?cell.crop:cell;
-            const crop=cropId?cropOf(cropId):null;
-            const el=document.createElement('div');
-            el.className='farm-parcel'+(crop?' assigned':'');
-            el.dataset.parcel=id;
-            el.style.position='relative';
-            el.setAttribute('role','gridcell');
-            el.setAttribute('aria-label',`Parcel ${id}${crop?': '+crop.label:''}`);
-            if(crop&&crop.bg) {
-                el.style.background=crop.bg;
-                el.style.border=`2px solid ${crop.bg}`;
-                el.innerHTML=`<span class="fp-id" style="color:${crop.tx}">${id}</span>
-                              <span class="fp-icon">${crop.icon}</span>
-                              <span class="fp-crop" style="color:${crop.tx}">${crop.label}</span>`;
-            } else {
-                el.innerHTML=`<span class="fp-id">${id}</span><span class="fp-empty"><i class="fa-solid fa-plus"></i></span>`;
-            }
-            // Phase 17 — pencil edit affordance opens ob-crop-modal in edit mode.
-            const pencil=document.createElement('button');
-            pencil.className='parcel-edit-btn';
-            pencil.setAttribute('aria-label',`Edit parcel ${id}`);
-            pencil.style.cssText='position:absolute;top:4px;right:4px;background:rgba(15,23,42,0.75);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#e2e8f0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.7rem;padding:0;';
-            pencil.innerHTML='<i class="fa-solid fa-pen"></i>';
-            pencil.addEventListener('click',(e)=>{ e.stopPropagation(); openEditParcelModal(id); });
-            el.appendChild(pencil);
+    // Phase 19: render one cell per filled parcel in row-major order, then a
+    // single "+" cell at position N. Rows grow past the initial `rows` as
+    // needed. No +/-Row/Column controls — the "+" cell is the only affordance.
+    const parcels = (profile.parcels || [])
+        .filter(p => p && p.crop)
+        .slice()
+        .sort((a, b) => a.id.localeCompare(b.id));
 
-            el.addEventListener('click',()=>selectParcel(id, cropId));
-            container.appendChild(el);
+    parcels.forEach(p => {
+        const id = p.id;
+        const cropId = p.crop;
+        const crop = cropOf(cropId);
+        const el = document.createElement('div');
+        el.className = 'farm-parcel assigned';
+        el.dataset.parcel = id;
+        el.style.position = 'relative';
+        el.setAttribute('role', 'gridcell');
+        el.setAttribute('aria-label', `Parcel ${id}${crop ? ': ' + crop.label : ''}`);
+        if (crop && crop.bg) {
+            el.style.background = crop.bg;
+            el.style.border = `2px solid ${crop.bg}`;
+            el.innerHTML = `<span class="fp-id" style="color:${crop.tx}">${id}</span>
+                            <span class="fp-icon">${crop.icon}</span>
+                            <span class="fp-crop" style="color:${crop.tx}">${crop.label}</span>`;
+        } else {
+            el.innerHTML = `<span class="fp-id">${id}</span>`;
         }
-    }
+
+        // Phase 19: corner pencil affordance. Explicit z-index and pointer-events
+        // to ensure the click reaches the button rather than the parcel below.
+        const pencil = document.createElement('button');
+        pencil.type = 'button';
+        pencil.className = 'parcel-edit-btn';
+        pencil.setAttribute('aria-label', `Edit parcel ${id}`);
+        pencil.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#e2e8f0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;padding:0;z-index:5;pointer-events:auto;';
+        pencil.innerHTML = '<i class="fa-solid fa-pen" style="pointer-events:none"></i>';
+        pencil.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try { openEditParcelModal(id); }
+            catch (err) { console.error('openEditParcelModal failed:', err); }
+        });
+        el.appendChild(pencil);
+
+        el.addEventListener('click', () => selectParcel(id, cropId));
+        container.appendChild(el);
+    });
+
+    // Compute the next slot for the "+" cell, respecting the user's column count.
+    const n = parcels.length;
+    const nextRow = Math.floor(n / cols);
+    const nextCol = n % cols;
+    const nextId = cellId(nextRow, nextCol);
+    const addEl = document.createElement('div');
+    addEl.className = 'farm-parcel add-cell';
+    addEl.dataset.parcel = nextId;
+    addEl.style.position = 'relative';
+    addEl.setAttribute('role', 'gridcell');
+    addEl.setAttribute('aria-label', `Add parcel ${nextId}`);
+    addEl.innerHTML = `<span class="fp-id">${nextId}</span><span class="fp-empty"><i class="fa-solid fa-plus"></i></span><span class="fp-crop" style="opacity:0.65;font-size:0.8rem">Add</span>`;
+    addEl.style.cursor = 'pointer';
+    addEl.style.borderStyle = 'dashed';
+    addEl.addEventListener('click', () => {
+        try { openEditParcelModal(nextId); }
+        catch (err) { console.error('openEditParcelModal (add) failed:', err); }
+    });
+    container.appendChild(addEl);
+
+    // Keep rows in sync so the persisted profile reflects the current layout.
+    profile.rows = Math.max(profile.rows || 1, nextRow + 1);
 }
 
 // Phase 17 — edit-parcel entrypoint. Reuses the onboarding modal in edit mode.

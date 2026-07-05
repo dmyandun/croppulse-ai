@@ -113,6 +113,7 @@ def route_after_router(ctx: Context, node_input: str) -> Event:
     selected_crop = ctx.state.get("selected_crop", "cacao")
 
     visual_intents = {
+        "CROP_IDENTIFICATION",
         "SOIL_ANALYSIS",
         "NUTRIENT_DEFICIENCY",
         "WEED_ID",
