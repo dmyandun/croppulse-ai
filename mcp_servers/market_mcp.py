@@ -195,13 +195,13 @@ def get_price_trend(commodity: str, days: int = 30) -> str:
     days = max(1, min(days, 365))
     today = date.today()
     history = []
+    prices: list[float] = []
     for i in range(days - 1, -1, -1):
         d = today - timedelta(days=i)
-        history.append(
-            {"date": d.isoformat(), "price_usd": _deterministic_price(key, d)}
-        )
+        p = _deterministic_price(key, d)
+        prices.append(p)
+        history.append({"date": d.isoformat(), "price_usd": p})
 
-    prices = [h["price_usd"] for h in history]
     first_price = prices[0]
     last_price = prices[-1]
     overall_change_pct = round((last_price - first_price) / first_price * 100, 2)

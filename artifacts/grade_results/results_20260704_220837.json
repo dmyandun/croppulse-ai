@@ -1,0 +1,533 @@
+{
+  "eval_case_results": [
+    {
+      "eval_case_index": 0,
+      "response_candidate_results": [
+        {
+          "response_index": 0,
+          "metric_results": {
+            "custom_response_quality": {
+              "metric_name": "custom_response_quality",
+              "score": 1.0,
+              "explanation": "The agent's response is completely irrelevant to the user's prompt. The user asked a general onboarding question ('Hello, what can you help me with?'), but the agent responded with a highly specific, detailed agricultural advisory report for a specific farm, completely ignoring the user's actual question.",
+              "rubric_verdicts": null,
+              "raw_output": null,
+              "error_message": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "eval_case_index": 1,
+      "response_candidate_results": [
+        {
+          "response_index": 0,
+          "metric_results": {
+            "custom_response_quality": {
+              "metric_name": "custom_response_quality",
+              "score": 1.0,
+              "explanation": "The agent's response is completely irrelevant to the user's query. The user asked about the weather in San Francisco, but the agent provided a detailed agricultural advisory report for crops in Ecuador.",
+              "rubric_verdicts": null,
+              "raw_output": null,
+              "error_message": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "eval_case_index": 2,
+      "response_candidate_results": [
+        {
+          "response_index": 0,
+          "metric_results": {
+            "custom_response_quality": {
+              "metric_name": "custom_response_quality",
+              "score": 1.0,
+              "explanation": "The agent's response is completely irrelevant to the user's query. The user asked for the capital of France, but the agent provided a detailed agricultural report about crop parcels, irrigation, and fertilizers.",
+              "rubric_verdicts": null,
+              "raw_output": null,
+              "error_message": null
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "summary_metrics": [
+    {
+      "metric_name": "custom_response_quality",
+      "num_cases_total": 3,
+      "num_cases_valid": 3,
+      "num_cases_error": 0,
+      "mean_score": 1.0,
+      "stdev_score": 0.0,
+      "pass_rate": null
+    }
+  ],
+  "win_rates": null,
+  "evaluation_dataset": [
+    {
+      "bigquery_source": null,
+      "gcs_source": null,
+      "eval_cases": [
+        {
+          "prompt": {
+            "parts": [
+              {
+                "media_resolution": null,
+                "code_execution_result": null,
+                "executable_code": null,
+                "file_data": null,
+                "function_call": null,
+                "function_response": null,
+                "inline_data": null,
+                "text": "Hello, what can you help me with?",
+                "thought": null,
+                "thought_signature": null,
+                "video_metadata": null,
+                "tool_call": null,
+                "tool_response": null,
+                "part_metadata": null
+              }
+            ],
+            "role": "user"
+          },
+          "responses": [
+            {
+              "response": {
+                "parts": [
+                  {
+                    "media_resolution": null,
+                    "code_execution_result": null,
+                    "executable_code": null,
+                    "file_data": null,
+                    "function_call": null,
+                    "function_response": null,
+                    "inline_data": null,
+                    "text": "### OBSERVATION\nBased on your farm records, your corn crop in **Parcel P3** is suffering from severe dry conditions and water stress. Urgent water is needed to save this crop. Fortunately, your cacao trees in **Parcel P1** and your banana plants in **Parcel P2** are currently healthy and doing well. \n\n---\n\n### CONTEXT\nWhile we do not have live weather or market prices today, July in El Carmen, Manab\u00ed is typically part of the dry season. Without natural rainfall, crops like corn dry out quickly. We must supply water manually to keep the corn alive until it is ready for harvest next month.\n\n---\n\n### ACTION\nHere is your step-by-step plan for the coming days and months:\n\n1. **IMMEDIATE ACTION (Today):** Turn on your irrigation system or manually water **Parcel P3 (Corn)**. This is urgent to save the crop from dying before harvest.\n2. **July 10, 2026:** Prune your cacao trees in **Parcel P1**. Pruning helps air flow through the trees and prevents diseases.\n3. **July 15, 2026:** Walk through **Parcel P2 (Banana)** and check the leaves for black spots (Black Sigatoka disease). \n4. **August 15, 2026:** Harvest your corn in **Parcel P3** and clear out the dry stalks to leave the soil ready for the next cycle.\n\n#### Structured Crop Calendar (Next 6-12 Months)\n* **July 2026:** \n  * Water dry corn (P3) immediately.\n  * Prune cacao trees (P1) for health.\n  * Inspect banana leaves (P2) for spots.\n* **August 2026:** Harvest corn (P3) and clear the land.\n* **September \u2013 October 2026:** General weeding and maintenance of cacao and banana parcels.\n* **November 2026:** Begin the main cacao harvest (P1). This is your major income window.\n* **December 2026:** Prepare the soil in Parcel P3 for winter planting.\n* **January 2027:** Plant new winter corn (P3) to take advantage of the upcoming rainy season.\n\n---\n\n### ECONOMIC JUSTIFICATION\n* **Save Your Corn:** Watering your corn in P3 today will prevent the plants from dying. This protects the money and time you have already invested in seeds and fertilizer, ensuring you still get a profitable harvest in August.\n* **Protect Your Cacao:** Pruning your cacao in P1 prevents fungal diseases. Fungal diseases can ruin up to 80% of your cacao pods. Spending time pruning now protects your main source of income for November.\n\n---\n\n### ALERT\n**Parcel P3 (Corn)** is very dry. Because it sits right next to your other crops, the dry soil can pull moisture away from **Parcel P2 (Banana)**. Bananas need a lot of water to grow heavy fruit. Check the soil around your bananas to make sure they are not drying out as well.\n\n---\n\n```json\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Dry/Needs Water\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation to save dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees for disease prevention\",\n      \"due_date\": \"2026-07-10\"\n    },\n    {\n      \"parcel\": \"P2\",\n      \"action\": \"Leaf inspection for Black Sigatoka\",\n      \"due_date\": \"2026-07-15\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation of dry corn in Parcel P3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation to save dry corn\"\n    },\n    {\n      \"date\": \"2026-07-10\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Pruning cacao trees\"\n    },\n    {\n      \"date\": \"2026-08-15\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Harvest corn and clear land\"\n    }\n  ]\n}\n```",
+                    "thought": null,
+                    "thought_signature": null,
+                    "video_metadata": null,
+                    "tool_call": null,
+                    "tool_response": null,
+                    "part_metadata": null
+                  }
+                ],
+                "role": "model"
+              }
+            }
+          ],
+          "reference": null,
+          "system_instruction": null,
+          "conversation_history": null,
+          "rubric_groups": null,
+          "eval_case_id": "greeting",
+          "intermediate_events": null,
+          "agent_info": null,
+          "agent_data": {
+            "agents": {
+              "croppulse_workflow": {
+                "agent_id": "croppulse_workflow",
+                "agent_type": "Workflow",
+                "description": "",
+                "instruction": null,
+                "tools": [],
+                "sub_agents": []
+              }
+            },
+            "turns": [
+              {
+                "turn_index": 0,
+                "turn_id": "turn_0",
+                "events": [
+                  {
+                    "author": "router_agent",
+                    "content": {
+                      "parts": [
+                        {
+                          "media_resolution": null,
+                          "code_execution_result": null,
+                          "executable_code": null,
+                          "file_data": null,
+                          "function_call": null,
+                          "function_response": null,
+                          "inline_data": null,
+                          "text": "{\n  \"intent\": \"GENERAL_QUESTION\",\n  \"mode\": 9,\n  \"confidence\": 1.0\n}",
+                          "thought": null,
+                          "thought_signature": null,
+                          "video_metadata": null,
+                          "tool_call": null,
+                          "tool_response": null,
+                          "part_metadata": null
+                        }
+                      ],
+                      "role": "model"
+                    },
+                    "event_time": null,
+                    "state_delta": null,
+                    "active_tools": null
+                  },
+                  {
+                    "author": "advisory_agent",
+                    "content": {
+                      "parts": [
+                        {
+                          "media_resolution": null,
+                          "code_execution_result": null,
+                          "executable_code": null,
+                          "file_data": null,
+                          "function_call": null,
+                          "function_response": null,
+                          "inline_data": null,
+                          "text": "### OBSERVATION\nBased on your farm records, your corn crop in **Parcel P3** is suffering from severe dry conditions and water stress. Urgent water is needed to save this crop. Fortunately, your cacao trees in **Parcel P1** and your banana plants in **Parcel P2** are currently healthy and doing well. \n\n---\n\n### CONTEXT\nWhile we do not have live weather or market prices today, July in El Carmen, Manab\u00ed is typically part of the dry season. Without natural rainfall, crops like corn dry out quickly. We must supply water manually to keep the corn alive until it is ready for harvest next month.\n\n---\n\n### ACTION\nHere is your step-by-step plan for the coming days and months:\n\n1. **IMMEDIATE ACTION (Today):** Turn on your irrigation system or manually water **Parcel P3 (Corn)**. This is urgent to save the crop from dying before harvest.\n2. **July 10, 2026:** Prune your cacao trees in **Parcel P1**. Pruning helps air flow through the trees and prevents diseases.\n3. **July 15, 2026:** Walk through **Parcel P2 (Banana)** and check the leaves for black spots (Black Sigatoka disease). \n4. **August 15, 2026:** Harvest your corn in **Parcel P3** and clear out the dry stalks to leave the soil ready for the next cycle.\n\n#### Structured Crop Calendar (Next 6-12 Months)\n* **July 2026:** \n  * Water dry corn (P3) immediately.\n  * Prune cacao trees (P1) for health.\n  * Inspect banana leaves (P2) for spots.\n* **August 2026:** Harvest corn (P3) and clear the land.\n* **September \u2013 October 2026:** General weeding and maintenance of cacao and banana parcels.\n* **November 2026:** Begin the main cacao harvest (P1). This is your major income window.\n* **December 2026:** Prepare the soil in Parcel P3 for winter planting.\n* **January 2027:** Plant new winter corn (P3) to take advantage of the upcoming rainy season.\n\n---\n\n### ECONOMIC JUSTIFICATION\n* **Save Your Corn:** Watering your corn in P3 today will prevent the plants from dying. This protects the money and time you have already invested in seeds and fertilizer, ensuring you still get a profitable harvest in August.\n* **Protect Your Cacao:** Pruning your cacao in P1 prevents fungal diseases. Fungal diseases can ruin up to 80% of your cacao pods. Spending time pruning now protects your main source of income for November.\n\n---\n\n### ALERT\n**Parcel P3 (Corn)** is very dry. Because it sits right next to your other crops, the dry soil can pull moisture away from **Parcel P2 (Banana)**. Bananas need a lot of water to grow heavy fruit. Check the soil around your bananas to make sure they are not drying out as well.\n\n---\n\n```json\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Dry/Needs Water\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation to save dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees for disease prevention\",\n      \"due_date\": \"2026-07-10\"\n    },\n    {\n      \"parcel\": \"P2\",\n      \"action\": \"Leaf inspection for Black Sigatoka\",\n      \"due_date\": \"2026-07-15\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation of dry corn in Parcel P3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation to save dry corn\"\n    },\n    {\n      \"date\": \"2026-07-10\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Pruning cacao trees\"\n    },\n    {\n      \"date\": \"2026-08-15\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Harvest corn and clear land\"\n    }\n  ]\n}\n```",
+                          "thought": null,
+                          "thought_signature": null,
+                          "video_metadata": null,
+                          "tool_call": null,
+                          "tool_response": null,
+                          "part_metadata": null
+                        }
+                      ],
+                      "role": "model"
+                    },
+                    "event_time": null,
+                    "state_delta": null,
+                    "active_tools": null
+                  }
+                ]
+              }
+            ]
+          },
+          "user_scenario": null
+        },
+        {
+          "prompt": {
+            "parts": [
+              {
+                "media_resolution": null,
+                "code_execution_result": null,
+                "executable_code": null,
+                "file_data": null,
+                "function_call": null,
+                "function_response": null,
+                "inline_data": null,
+                "text": "What's the weather like in San Francisco?",
+                "thought": null,
+                "thought_signature": null,
+                "video_metadata": null,
+                "tool_call": null,
+                "tool_response": null,
+                "part_metadata": null
+              }
+            ],
+            "role": "user"
+          },
+          "responses": [
+            {
+              "response": {
+                "parts": [
+                  {
+                    "media_resolution": null,
+                    "code_execution_result": null,
+                    "executable_code": null,
+                    "file_data": null,
+                    "function_call": null,
+                    "function_response": null,
+                    "inline_data": null,
+                    "text": "**OBSERVATION:**  \nYour corn crop in Parcel 3 (P3) is suffering from severe water stress and is currently very dry. Fortunately, your Cacao (Parcel 1) and Banana (Parcel 2) crops are currently in healthy condition. \n\n---\n\n**CONTEXT:**  \nIn El Carmen, Manab\u00ed, maintaining proper water levels is critical for corn, especially as it approaches its harvest window next month. Without immediate water, the corn ears will not fill properly, leading to a major loss in crop weight and quality. Additionally, your cacao and banana crops require preventive care (pruning and leaf inspections) this month to keep them healthy and disease-free before the wetter months arrive.\n\n---\n\n**ACTION:**  \nHere is your step-by-step plan for the next few days and months:\n\n1. **IMMEDIATE (Next 24 Hours):** Irrigate Parcel 3 (Corn) thoroughly to save the dry crop and ensure the ears develop fully for the upcoming harvest.\n2. **July 10, 2026:** Prune your cacao trees in Parcel 1 (P1). This lets air and sunlight into the trees, which prevents dangerous fungal diseases like Frosty Pod Rot (*Monilia*).\n3. **July 15, 2026:** Walk through Parcel 2 (Banana) and inspect the leaves carefully for any dark streaks, which are early signs of Black Sigatoka disease.\n4. **August 15, 2026:** Harvest your corn in Parcel 3 and clear away all dry crop residues to keep the soil clean.\n\n### 6-Month Crop Calendar (July 2026 \u2013 January 2027)\n\n| Month | Parcel | Crop | Activity | Expected Outcome |\n| :--- | :--- | :--- | :--- | :--- |\n| **July 2026** | P3 <br> P1 <br> P2 | Corn <br> Cacao <br> Banana | \u2022 Irrigate immediately <br> \u2022 Prune cacao trees (July 10) <br> \u2022 Inspect banana leaves (July 15) | \u2022 Save corn yield <br> \u2022 Prevent cacao fungi <br> \u2022 Early disease detection |\n| **August 2026** | P3 | Corn | Harvest corn and clear the parcel | Generate immediate cash; clean field |\n| **Sept - Oct 2026**| P3 | - | Allow parcel soil to rest and prepare land | Restore soil health for next cycle |\n| **November 2026** | P1 | Cacao | Begin main cacao harvest | High-value income from cacao beans |\n| **December 2026** | P3 | Corn | Apply basic organic fertilizer/compost | Prepare soil for winter planting |\n| **January 2027** | P3 | Corn | Plant winter corn seed | Utilize the winter rains to save irrigation costs |\n\n---\n\n**ECONOMIC JUSTIFICATION:**  \nIrrigating your corn in Parcel 3 today will cost a small amount in fuel or water pump usage, but it saves your entire 1-hectare corn crop from failing right before the August harvest. This guarantees you have corn to sell, protecting your investment. Pruning your cacao now protects your highest-value crop (cacao) ahead of the main harvest in November, ensuring you get top prices for healthy, disease-free beans.\n\n---\n\n**ALERT:**  \nBecause Parcel 3 (Corn) is dry and stressed, it is highly attractive to pests like the fall armyworm. Since Parcel 3 sits right next to your healthy Banana (P2) and Cacao (P1) parcels, check the borders of those healthy fields daily. Pests from the dry corn may try to move into your healthy crops to find moisture.\n\n---\n\n```json\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Water Stress\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation of dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees for disease prevention\",\n      \"due_date\": \"2026-07-10\"\n    },\n    {\n      \"parcel\": \"P2\",\n      \"action\": \"Inspect banana leaves for Black Sigatoka\",\n      \"due_date\": \"2026-07-15\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation to save dry corn in Parcel 3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation\"\n    },\n    {\n      \"date\": \"2026-07-10\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Pruning cacao trees\"\n    },\n    {\n      \"date\": \"2026-07-15\",\n      \"parcel\": \"P2\",\n      \"activity\": \"Banana leaf Sigatoka inspection\"\n    },\n    {\n      \"date\": \"2026-08-15\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Harvest corn and clear dry residue\"\n    },\n    {\n      \"date\": \"2026-11-15\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Main Cacao Harvest begins\"\n    },\n    {\n      \"date\": \"2027-01-05\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Plant winter corn to utilize rainy season\"\n    }\n  ]\n}\n```",
+                    "thought": null,
+                    "thought_signature": null,
+                    "video_metadata": null,
+                    "tool_call": null,
+                    "tool_response": null,
+                    "part_metadata": null
+                  }
+                ],
+                "role": "model"
+              }
+            }
+          ],
+          "reference": null,
+          "system_instruction": null,
+          "conversation_history": null,
+          "rubric_groups": null,
+          "eval_case_id": "weather_query",
+          "intermediate_events": null,
+          "agent_info": null,
+          "agent_data": {
+            "agents": {
+              "croppulse_workflow": {
+                "agent_id": "croppulse_workflow",
+                "agent_type": "Workflow",
+                "description": "",
+                "instruction": null,
+                "tools": [],
+                "sub_agents": []
+              }
+            },
+            "turns": [
+              {
+                "turn_index": 0,
+                "turn_id": "turn_0",
+                "events": [
+                  {
+                    "author": "router_agent",
+                    "content": {
+                      "parts": [
+                        {
+                          "media_resolution": null,
+                          "code_execution_result": null,
+                          "executable_code": null,
+                          "file_data": null,
+                          "function_call": null,
+                          "function_response": null,
+                          "inline_data": null,
+                          "text": "{\n  \"intent\": \"GENERAL_QUESTION\",\n  \"mode\": 1,\n  \"confidence\": 1.0\n}",
+                          "thought": null,
+                          "thought_signature": null,
+                          "video_metadata": null,
+                          "tool_call": null,
+                          "tool_response": null,
+                          "part_metadata": null
+                        }
+                      ],
+                      "role": "model"
+                    },
+                    "event_time": null,
+                    "state_delta": null,
+                    "active_tools": null
+                  },
+                  {
+                    "author": "advisory_agent",
+                    "content": {
+                      "parts": [
+                        {
+                          "media_resolution": null,
+                          "code_execution_result": null,
+                          "executable_code": null,
+                          "file_data": null,
+                          "function_call": null,
+                          "function_response": null,
+                          "inline_data": null,
+                          "text": "**OBSERVATION:**  \nYour corn crop in Parcel 3 (P3) is suffering from severe water stress and is currently very dry. Fortunately, your Cacao (Parcel 1) and Banana (Parcel 2) crops are currently in healthy condition. \n\n---\n\n**CONTEXT:**  \nIn El Carmen, Manab\u00ed, maintaining proper water levels is critical for corn, especially as it approaches its harvest window next month. Without immediate water, the corn ears will not fill properly, leading to a major loss in crop weight and quality. Additionally, your cacao and banana crops require preventive care (pruning and leaf inspections) this month to keep them healthy and disease-free before the wetter months arrive.\n\n---\n\n**ACTION:**  \nHere is your step-by-step plan for the next few days and months:\n\n1. **IMMEDIATE (Next 24 Hours):** Irrigate Parcel 3 (Corn) thoroughly to save the dry crop and ensure the ears develop fully for the upcoming harvest.\n2. **July 10, 2026:** Prune your cacao trees in Parcel 1 (P1). This lets air and sunlight into the trees, which prevents dangerous fungal diseases like Frosty Pod Rot (*Monilia*).\n3. **July 15, 2026:** Walk through Parcel 2 (Banana) and inspect the leaves carefully for any dark streaks, which are early signs of Black Sigatoka disease.\n4. **August 15, 2026:** Harvest your corn in Parcel 3 and clear away all dry crop residues to keep the soil clean.\n\n### 6-Month Crop Calendar (July 2026 \u2013 January 2027)\n\n| Month | Parcel | Crop | Activity | Expected Outcome |\n| :--- | :--- | :--- | :--- | :--- |\n| **July 2026** | P3 <br> P1 <br> P2 | Corn <br> Cacao <br> Banana | \u2022 Irrigate immediately <br> \u2022 Prune cacao trees (July 10) <br> \u2022 Inspect banana leaves (July 15) | \u2022 Save corn yield <br> \u2022 Prevent cacao fungi <br> \u2022 Early disease detection |\n| **August 2026** | P3 | Corn | Harvest corn and clear the parcel | Generate immediate cash; clean field |\n| **Sept - Oct 2026**| P3 | - | Allow parcel soil to rest and prepare land | Restore soil health for next cycle |\n| **November 2026** | P1 | Cacao | Begin main cacao harvest | High-value income from cacao beans |\n| **December 2026** | P3 | Corn | Apply basic organic fertilizer/compost | Prepare soil for winter planting |\n| **January 2027** | P3 | Corn | Plant winter corn seed | Utilize the winter rains to save irrigation costs |\n\n---\n\n**ECONOMIC JUSTIFICATION:**  \nIrrigating your corn in Parcel 3 today will cost a small amount in fuel or water pump usage, but it saves your entire 1-hectare corn crop from failing right before the August harvest. This guarantees you have corn to sell, protecting your investment. Pruning your cacao now protects your highest-value crop (cacao) ahead of the main harvest in November, ensuring you get top prices for healthy, disease-free beans.\n\n---\n\n**ALERT:**  \nBecause Parcel 3 (Corn) is dry and stressed, it is highly attractive to pests like the fall armyworm. Since Parcel 3 sits right next to your healthy Banana (P2) and Cacao (P1) parcels, check the borders of those healthy fields daily. Pests from the dry corn may try to move into your healthy crops to find moisture.\n\n---\n\n```json\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Water Stress\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation of dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees for disease prevention\",\n      \"due_date\": \"2026-07-10\"\n    },\n    {\n      \"parcel\": \"P2\",\n      \"action\": \"Inspect banana leaves for Black Sigatoka\",\n      \"due_date\": \"2026-07-15\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation to save dry corn in Parcel 3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation\"\n    },\n    {\n      \"date\": \"2026-07-10\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Pruning cacao trees\"\n    },\n    {\n      \"date\": \"2026-07-15\",\n      \"parcel\": \"P2\",\n      \"activity\": \"Banana leaf Sigatoka inspection\"\n    },\n    {\n      \"date\": \"2026-08-15\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Harvest corn and clear dry residue\"\n    },\n    {\n      \"date\": \"2026-11-15\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Main Cacao Harvest begins\"\n    },\n    {\n      \"date\": \"2027-01-05\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Plant winter corn to utilize rainy season\"\n    }\n  ]\n}\n```",
+                          "thought": null,
+                          "thought_signature": null,
+                          "video_metadata": null,
+                          "tool_call": null,
+                          "tool_response": null,
+                          "part_metadata": null
+                        }
+                      ],
+                      "role": "model"
+                    },
+                    "event_time": null,
+                    "state_delta": null,
+                    "active_tools": null
+                  }
+                ]
+              }
+            ]
+          },
+          "user_scenario": null
+        },
+        {
+          "prompt": {
+            "parts": [
+              {
+                "media_resolution": null,
+                "code_execution_result": null,
+                "executable_code": null,
+                "file_data": null,
+                "function_call": null,
+                "function_response": null,
+                "inline_data": null,
+                "text": "What is the capital of France?",
+                "thought": null,
+                "thought_signature": null,
+                "video_metadata": null,
+                "tool_call": null,
+                "tool_response": null,
+                "part_metadata": null
+              }
+            ],
+            "role": "user"
+          },
+          "responses": [
+            {
+              "response": {
+                "parts": [
+                  {
+                    "media_resolution": null,
+                    "code_execution_result": null,
+                    "executable_code": null,
+                    "file_data": null,
+                    "function_call": null,
+                    "function_response": null,
+                    "inline_data": null,
+                    "text": "### OBSERVATION\nOur records show that **Parcel P3 (Corn)** is experiencing water stress and is currently dry. **Parcel P1 (Cacao)** and **Parcel P2 (Banana)** are currently healthy. Additionally, our historical farm records show that **Parcel C2** is suffering from a nutrient deficiency and needs fertilizer.\n\n---\n\n### CONTEXT\nYour farm is located in El Carmen, Manab\u00ed, Ecuador. Although we do not have current weather or market data, we know that July is typically a drier month in your region. Because your corn in Parcel P3 is drying out, we must act immediately to irrigate it before its scheduled harvest in August. \n\nKeeping your crops well-watered and fertilized now will protect your upcoming harvests and keep your soil healthy.\n\n---\n\n### ACTION\nHere is your step-by-step action plan for the next few months to keep your farm productive:\n\n#### Urgent Tasks (This Week)\n*   **July 6, 2026 (Today) - Parcel P3 (Corn):** Apply urgent irrigation to the dry corn immediately to save the crop before harvest.\n*   **July 8, 2026 - Parcel C2:** Apply NPK 15-15-15 fertilizer to correct the nutrient deficiency.\n\n#### Upcoming Activities (Crop Calendar: July 2026 - January 2027)\n*   **July 10, 2026 - Parcel P1 (Cacao):** Prune your cacao trees. This lets in sunlight and air, which prevents diseases.\n*   **July 15, 2026 - Parcel P2 (Banana):** Inspect the banana leaves closely for any signs of Black Sigatoka (dark spots or stripes).\n*   **August 15, 2026 - Parcel P3 (Corn):** Harvest your corn and clear all the dry crop residues from the field.\n*   **November 15, 2026 - Parcel P1 (Cacao):** Begin your main cacao harvest.\n*   **January 5, 2027 - Parcel P3 (Corn):** Plant your new winter corn crop to make the most of the upcoming rainy season.\n\n---\n\n### ECONOMIC JUSTIFICATION\n*   **Watering your Corn (P3):** Spending a small amount of money and time on irrigation now protects your investment in seeds and labor. It ensures you will have a good corn harvest in August instead of losing the crop to dryness.\n*   **Pruning Cacao (P1):** Pruning prevents fungal diseases. It is much cheaper to prune today than to buy expensive chemical sprays later when the trees get sick.\n\n---\n\n### ALERT\nDry corn stalks in **Parcel P3** can catch fire easily during dry weeks. Clean up dry weeds around the borders of this parcel to protect the adjacent healthy **Banana (P2)** and **Cacao (P1)** trees. Also, make sure to treat the nutrient deficiency in **Parcel C2** so it does not spread or reduce your overall farm yield.\n\n---\n\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Water Stress\",\n    \"C2\": \"Nutrient Deficiency\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation of dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"C2\",\n      \"action\": \"Apply NPK 15-15-15 fertilizer\",\n      \"due_date\": \"2026-07-08\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees\",\n      \"due_date\": \"2026-07-10\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation of dry corn on Parcel P3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation to save dry corn\"\n    },\n    {\n      \"date\": \"2026-07-08\",\n      \"parcel\": \"C2\",\n      \"activity\": \"Apply NPK 15-15-15 fertilizer\"\n    }\n  ]\n}",
+                    "thought": null,
+                    "thought_signature": null,
+                    "video_metadata": null,
+                    "tool_call": null,
+                    "tool_response": null,
+                    "part_metadata": null
+                  }
+                ],
+                "role": "model"
+              }
+            }
+          ],
+          "reference": {
+            "response": {
+              "parts": [
+                {
+                  "media_resolution": null,
+                  "code_execution_result": null,
+                  "executable_code": null,
+                  "file_data": null,
+                  "function_call": null,
+                  "function_response": null,
+                  "inline_data": null,
+                  "text": "The capital of France is Paris.",
+                  "thought": null,
+                  "thought_signature": null,
+                  "video_metadata": null,
+                  "tool_call": null,
+                  "tool_response": null,
+                  "part_metadata": null
+                }
+              ],
+              "role": "model"
+            }
+          },
+          "system_instruction": null,
+          "conversation_history": null,
+          "rubric_groups": null,
+          "eval_case_id": "capital_lookup",
+          "intermediate_events": null,
+          "agent_info": null,
+          "agent_data": {
+            "agents": {
+              "croppulse_workflow": {
+                "agent_id": "croppulse_workflow",
+                "agent_type": "Workflow",
+                "description": "",
+                "instruction": null,
+                "tools": [],
+                "sub_agents": []
+              }
+            },
+            "turns": [
+              {
+                "turn_index": 0,
+                "turn_id": "turn_0",
+                "events": [
+                  {
+                    "author": "router_agent",
+                    "content": {
+                      "parts": [
+                        {
+                          "media_resolution": null,
+                          "code_execution_result": null,
+                          "executable_code": null,
+                          "file_data": null,
+                          "function_call": null,
+                          "function_response": null,
+                          "inline_data": null,
+                          "text": "{\"intent\": \"GENERAL_QUESTION\", \"mode\": 1, \"confidence\": 1.0}",
+                          "thought": null,
+                          "thought_signature": null,
+                          "video_metadata": null,
+                          "tool_call": null,
+                          "tool_response": null,
+                          "part_metadata": null
+                        }
+                      ],
+                      "role": "model"
+                    },
+                    "event_time": null,
+                    "state_delta": null,
+                    "active_tools": null
+                  },
+                  {
+                    "author": "advisory_agent",
+                    "content": {
+                      "parts": [
+                        {
+                          "media_resolution": null,
+                          "code_execution_result": null,
+                          "executable_code": null,
+                          "file_data": null,
+                          "function_call": null,
+                          "function_response": null,
+                          "inline_data": null,
+                          "text": "### OBSERVATION\nOur records show that **Parcel P3 (Corn)** is experiencing water stress and is currently dry. **Parcel P1 (Cacao)** and **Parcel P2 (Banana)** are currently healthy. Additionally, our historical farm records show that **Parcel C2** is suffering from a nutrient deficiency and needs fertilizer.\n\n---\n\n### CONTEXT\nYour farm is located in El Carmen, Manab\u00ed, Ecuador. Although we do not have current weather or market data, we know that July is typically a drier month in your region. Because your corn in Parcel P3 is drying out, we must act immediately to irrigate it before its scheduled harvest in August. \n\nKeeping your crops well-watered and fertilized now will protect your upcoming harvests and keep your soil healthy.\n\n---\n\n### ACTION\nHere is your step-by-step action plan for the next few months to keep your farm productive:\n\n#### Urgent Tasks (This Week)\n*   **July 6, 2026 (Today) - Parcel P3 (Corn):** Apply urgent irrigation to the dry corn immediately to save the crop before harvest.\n*   **July 8, 2026 - Parcel C2:** Apply NPK 15-15-15 fertilizer to correct the nutrient deficiency.\n\n#### Upcoming Activities (Crop Calendar: July 2026 - January 2027)\n*   **July 10, 2026 - Parcel P1 (Cacao):** Prune your cacao trees. This lets in sunlight and air, which prevents diseases.\n*   **July 15, 2026 - Parcel P2 (Banana):** Inspect the banana leaves closely for any signs of Black Sigatoka (dark spots or stripes).\n*   **August 15, 2026 - Parcel P3 (Corn):** Harvest your corn and clear all the dry crop residues from the field.\n*   **November 15, 2026 - Parcel P1 (Cacao):** Begin your main cacao harvest.\n*   **January 5, 2027 - Parcel P3 (Corn):** Plant your new winter corn crop to make the most of the upcoming rainy season.\n\n---\n\n### ECONOMIC JUSTIFICATION\n*   **Watering your Corn (P3):** Spending a small amount of money and time on irrigation now protects your investment in seeds and labor. It ensures you will have a good corn harvest in August instead of losing the crop to dryness.\n*   **Pruning Cacao (P1):** Pruning prevents fungal diseases. It is much cheaper to prune today than to buy expensive chemical sprays later when the trees get sick.\n\n---\n\n### ALERT\nDry corn stalks in **Parcel P3** can catch fire easily during dry weeks. Clean up dry weeds around the borders of this parcel to protect the adjacent healthy **Banana (P2)** and **Cacao (P1)** trees. Also, make sure to treat the nutrient deficiency in **Parcel C2** so it does not spread or reduce your overall farm yield.\n\n---\n\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Water Stress\",\n    \"C2\": \"Nutrient Deficiency\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation of dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"C2\",\n      \"action\": \"Apply NPK 15-15-15 fertilizer\",\n      \"due_date\": \"2026-07-08\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees\",\n      \"due_date\": \"2026-07-10\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation of dry corn on Parcel P3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation to save dry corn\"\n    },\n    {\n      \"date\": \"2026-07-08\",\n      \"parcel\": \"C2\",\n      \"activity\": \"Apply NPK 15-15-15 fertilizer\"\n    }\n  ]\n}",
+                          "thought": null,
+                          "thought_signature": null,
+                          "video_metadata": null,
+                          "tool_call": null,
+                          "tool_response": null,
+                          "part_metadata": null
+                        }
+                      ],
+                      "role": "model"
+                    },
+                    "event_time": null,
+                    "state_delta": null,
+                    "active_tools": null
+                  }
+                ]
+              }
+            ]
+          },
+          "user_scenario": null
+        }
+      ],
+      "eval_dataset_df": null,
+      "candidate_name": null
+    }
+  ],
+  "metadata": {
+    "candidate_names": [
+      "candidate_1"
+    ],
+    "dataset_name": null,
+    "dataset_id": null,
+    "creation_timestamp": "2026-07-05T03:08:37.598344Z",
+    "dataset": [
+      {
+        "prompt_display_text": "Hello, what can you help me with?",
+        "prompt_raw_json": "{\n  \"parts\": [\n    {\n      \"text\": \"Hello, what can you help me with?\"\n    }\n  ],\n  \"role\": \"user\"\n}",
+        "reference": "",
+        "reference_raw_json": "",
+        "response_display_text": "### OBSERVATION\nBased on your farm records, your corn crop in **Parcel P3** is suffering from severe dry conditions and water stress. Urgent water is needed to save this crop. Fortunately, your cacao trees in **Parcel P1** and your banana plants in **Parcel P2** are currently healthy and doing well. \n\n---\n\n### CONTEXT\nWhile we do not have live weather or market prices today, July in El Carmen, Manab\u00ed is typically part of the dry season. Without natural rainfall, crops like corn dry out quickly. We must supply water manually to keep the corn alive until it is ready for harvest next month.\n\n---\n\n### ACTION\nHere is your step-by-step plan for the coming days and months:\n\n1. **IMMEDIATE ACTION (Today):** Turn on your irrigation system or manually water **Parcel P3 (Corn)**. This is urgent to save the crop from dying before harvest.\n2. **July 10, 2026:** Prune your cacao trees in **Parcel P1**. Pruning helps air flow through the trees and prevents diseases.\n3. **July 15, 2026:** Walk through **Parcel P2 (Banana)** and check the leaves for black spots (Black Sigatoka disease). \n4. **August 15, 2026:** Harvest your corn in **Parcel P3** and clear out the dry stalks to leave the soil ready for the next cycle.\n\n#### Structured Crop Calendar (Next 6-12 Months)\n* **July 2026:** \n  * Water dry corn (P3) immediately.\n  * Prune cacao trees (P1) for health.\n  * Inspect banana leaves (P2) for spots.\n* **August 2026:** Harvest corn (P3) and clear the land.\n* **September \u2013 October 2026:** General weeding and maintenance of cacao and banana parcels.\n* **November 2026:** Begin the main cacao harvest (P1). This is your major income window.\n* **December 2026:** Prepare the soil in Parcel P3 for winter planting.\n* **January 2027:** Plant new winter corn (P3) to take advantage of the upcoming rainy season.\n\n---\n\n### ECONOMIC JUSTIFICATION\n* **Save Your Corn:** Watering your corn in P3 today will prevent the plants from dying. This protects the money and time you have already invested in seeds and fertilizer, ensuring you still get a profitable harvest in August.\n* **Protect Your Cacao:** Pruning your cacao in P1 prevents fungal diseases. Fungal diseases can ruin up to 80% of your cacao pods. Spending time pruning now protects your main source of income for November.\n\n---\n\n### ALERT\n**Parcel P3 (Corn)** is very dry. Because it sits right next to your other crops, the dry soil can pull moisture away from **Parcel P2 (Banana)**. Bananas need a lot of water to grow heavy fruit. Check the soil around your bananas to make sure they are not drying out as well.\n\n---\n\n```json\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Dry/Needs Water\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation to save dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees for disease prevention\",\n      \"due_date\": \"2026-07-10\"\n    },\n    {\n      \"parcel\": \"P2\",\n      \"action\": \"Leaf inspection for Black Sigatoka\",\n      \"due_date\": \"2026-07-15\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation of dry corn in Parcel P3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation to save dry corn\"\n    },\n    {\n      \"date\": \"2026-07-10\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Pruning cacao trees\"\n    },\n    {\n      \"date\": \"2026-08-15\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Harvest corn and clear land\"\n    }\n  ]\n}\n```",
+        "response_raw_json": "{\n  \"parts\": [\n    {\n      \"text\": \"### OBSERVATION\\nBased on your farm records, your corn crop in **Parcel P3** is suffering from severe dry conditions and water stress. Urgent water is needed to save this crop. Fortunately, your cacao trees in **Parcel P1** and your banana plants in **Parcel P2** are currently healthy and doing well. \\n\\n---\\n\\n### CONTEXT\\nWhile we do not have live weather or market prices today, July in El Carmen, Manab\u00ed is typically part of the dry season. Without natural rainfall, crops like corn dry out quickly. We must supply water manually to keep the corn alive until it is ready for harvest next month.\\n\\n---\\n\\n### ACTION\\nHere is your step-by-step plan for the coming days and months:\\n\\n1. **IMMEDIATE ACTION (Today):** Turn on your irrigation system or manually water **Parcel P3 (Corn)**. This is urgent to save the crop from dying before harvest.\\n2. **July 10, 2026:** Prune your cacao trees in **Parcel P1**. Pruning helps air flow through the trees and prevents diseases.\\n3. **July 15, 2026:** Walk through **Parcel P2 (Banana)** and check the leaves for black spots (Black Sigatoka disease). \\n4. **August 15, 2026:** Harvest your corn in **Parcel P3** and clear out the dry stalks to leave the soil ready for the next cycle.\\n\\n#### Structured Crop Calendar (Next 6-12 Months)\\n* **July 2026:** \\n  * Water dry corn (P3) immediately.\\n  * Prune cacao trees (P1) for health.\\n  * Inspect banana leaves (P2) for spots.\\n* **August 2026:** Harvest corn (P3) and clear the land.\\n* **September \u2013 October 2026:** General weeding and maintenance of cacao and banana parcels.\\n* **November 2026:** Begin the main cacao harvest (P1). This is your major income window.\\n* **December 2026:** Prepare the soil in Parcel P3 for winter planting.\\n* **January 2027:** Plant new winter corn (P3) to take advantage of the upcoming rainy season.\\n\\n---\\n\\n### ECONOMIC JUSTIFICATION\\n* **Save Your Corn:** Watering your corn in P3 today will prevent the plants from dying. This protects the money and time you have already invested in seeds and fertilizer, ensuring you still get a profitable harvest in August.\\n* **Protect Your Cacao:** Pruning your cacao in P1 prevents fungal diseases. Fungal diseases can ruin up to 80% of your cacao pods. Spending time pruning now protects your main source of income for November.\\n\\n---\\n\\n### ALERT\\n**Parcel P3 (Corn)** is very dry. Because it sits right next to your other crops, the dry soil can pull moisture away from **Parcel P2 (Banana)**. Bananas need a lot of water to grow heavy fruit. Check the soil around your bananas to make sure they are not drying out as well.\\n\\n---\\n\\n```json\\n[INDICATORS]\\n{\\n  \\\"parcel_health\\\": {\\n    \\\"P1\\\": \\\"Healthy\\\",\\n    \\\"P2\\\": \\\"Healthy\\\",\\n    \\\"P3\\\": \\\"Dry/Needs Water\\\"\\n  },\\n  \\\"pending_actions\\\": [\\n    {\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"action\\\": \\\"Urgent irrigation to save dry corn\\\",\\n      \\\"due_date\\\": \\\"2026-07-06\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"action\\\": \\\"Pruning cacao trees for disease prevention\\\",\\n      \\\"due_date\\\": \\\"2026-07-10\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P2\\\",\\n      \\\"action\\\": \\\"Leaf inspection for Black Sigatoka\\\",\\n      \\\"due_date\\\": \\\"2026-07-15\\\"\\n    }\\n  ],\\n  \\\"next_activity\\\": {\\n    \\\"description\\\": \\\"Urgent irrigation of dry corn in Parcel P3\\\",\\n    \\\"date\\\": \\\"2026-07-06\\\"\\n  },\\n  \\\"crop_plan_updates\\\": [\\n    {\\n      \\\"date\\\": \\\"2026-07-06\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Urgent irrigation to save dry corn\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-10\\\",\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"activity\\\": \\\"Pruning cacao trees\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-08-15\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Harvest corn and clear land\\\"\\n    }\\n  ]\\n}\\n```\"\n    }\n  ],\n  \"role\": \"model\"\n}",
+        "intermediate_events": null,
+        "agent_data": "{\"agents\": {\"croppulse_workflow\": {\"agent_id\": \"croppulse_workflow\", \"agent_type\": \"Workflow\", \"description\": \"\", \"tools\": [], \"sub_agents\": []}}, \"turns\": [{\"turn_index\": 0, \"turn_id\": \"turn_0\", \"events\": [{\"author\": \"router_agent\", \"content\": {\"parts\": [{\"text\": \"{\\n  \\\"intent\\\": \\\"GENERAL_QUESTION\\\",\\n  \\\"mode\\\": 9,\\n  \\\"confidence\\\": 1.0\\n}\"}], \"role\": \"model\"}}, {\"author\": \"advisory_agent\", \"content\": {\"parts\": [{\"text\": \"### OBSERVATION\\nBased on your farm records, your corn crop in **Parcel P3** is suffering from severe dry conditions and water stress. Urgent water is needed to save this crop. Fortunately, your cacao trees in **Parcel P1** and your banana plants in **Parcel P2** are currently healthy and doing well. \\n\\n---\\n\\n### CONTEXT\\nWhile we do not have live weather or market prices today, July in El Carmen, Manab\u00ed is typically part of the dry season. Without natural rainfall, crops like corn dry out quickly. We must supply water manually to keep the corn alive until it is ready for harvest next month.\\n\\n---\\n\\n### ACTION\\nHere is your step-by-step plan for the coming days and months:\\n\\n1. **IMMEDIATE ACTION (Today):** Turn on your irrigation system or manually water **Parcel P3 (Corn)**. This is urgent to save the crop from dying before harvest.\\n2. **July 10, 2026:** Prune your cacao trees in **Parcel P1**. Pruning helps air flow through the trees and prevents diseases.\\n3. **July 15, 2026:** Walk through **Parcel P2 (Banana)** and check the leaves for black spots (Black Sigatoka disease). \\n4. **August 15, 2026:** Harvest your corn in **Parcel P3** and clear out the dry stalks to leave the soil ready for the next cycle.\\n\\n#### Structured Crop Calendar (Next 6-12 Months)\\n* **July 2026:** \\n  * Water dry corn (P3) immediately.\\n  * Prune cacao trees (P1) for health.\\n  * Inspect banana leaves (P2) for spots.\\n* **August 2026:** Harvest corn (P3) and clear the land.\\n* **September \u2013 October 2026:** General weeding and maintenance of cacao and banana parcels.\\n* **November 2026:** Begin the main cacao harvest (P1). This is your major income window.\\n* **December 2026:** Prepare the soil in Parcel P3 for winter planting.\\n* **January 2027:** Plant new winter corn (P3) to take advantage of the upcoming rainy season.\\n\\n---\\n\\n### ECONOMIC JUSTIFICATION\\n* **Save Your Corn:** Watering your corn in P3 today will prevent the plants from dying. This protects the money and time you have already invested in seeds and fertilizer, ensuring you still get a profitable harvest in August.\\n* **Protect Your Cacao:** Pruning your cacao in P1 prevents fungal diseases. Fungal diseases can ruin up to 80% of your cacao pods. Spending time pruning now protects your main source of income for November.\\n\\n---\\n\\n### ALERT\\n**Parcel P3 (Corn)** is very dry. Because it sits right next to your other crops, the dry soil can pull moisture away from **Parcel P2 (Banana)**. Bananas need a lot of water to grow heavy fruit. Check the soil around your bananas to make sure they are not drying out as well.\\n\\n---\\n\\n```json\\n[INDICATORS]\\n{\\n  \\\"parcel_health\\\": {\\n    \\\"P1\\\": \\\"Healthy\\\",\\n    \\\"P2\\\": \\\"Healthy\\\",\\n    \\\"P3\\\": \\\"Dry/Needs Water\\\"\\n  },\\n  \\\"pending_actions\\\": [\\n    {\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"action\\\": \\\"Urgent irrigation to save dry corn\\\",\\n      \\\"due_date\\\": \\\"2026-07-06\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"action\\\": \\\"Pruning cacao trees for disease prevention\\\",\\n      \\\"due_date\\\": \\\"2026-07-10\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P2\\\",\\n      \\\"action\\\": \\\"Leaf inspection for Black Sigatoka\\\",\\n      \\\"due_date\\\": \\\"2026-07-15\\\"\\n    }\\n  ],\\n  \\\"next_activity\\\": {\\n    \\\"description\\\": \\\"Urgent irrigation of dry corn in Parcel P3\\\",\\n    \\\"date\\\": \\\"2026-07-06\\\"\\n  },\\n  \\\"crop_plan_updates\\\": [\\n    {\\n      \\\"date\\\": \\\"2026-07-06\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Urgent irrigation to save dry corn\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-10\\\",\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"activity\\\": \\\"Pruning cacao trees\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-08-15\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Harvest corn and clear land\\\"\\n    }\\n  ]\\n}\\n```\"}], \"role\": \"model\"}}]}]}"
+      },
+      {
+        "prompt_display_text": "What's the weather like in San Francisco?",
+        "prompt_raw_json": "{\n  \"parts\": [\n    {\n      \"text\": \"What's the weather like in San Francisco?\"\n    }\n  ],\n  \"role\": \"user\"\n}",
+        "reference": "",
+        "reference_raw_json": "",
+        "response_display_text": "**OBSERVATION:**  \nYour corn crop in Parcel 3 (P3) is suffering from severe water stress and is currently very dry. Fortunately, your Cacao (Parcel 1) and Banana (Parcel 2) crops are currently in healthy condition. \n\n---\n\n**CONTEXT:**  \nIn El Carmen, Manab\u00ed, maintaining proper water levels is critical for corn, especially as it approaches its harvest window next month. Without immediate water, the corn ears will not fill properly, leading to a major loss in crop weight and quality. Additionally, your cacao and banana crops require preventive care (pruning and leaf inspections) this month to keep them healthy and disease-free before the wetter months arrive.\n\n---\n\n**ACTION:**  \nHere is your step-by-step plan for the next few days and months:\n\n1. **IMMEDIATE (Next 24 Hours):** Irrigate Parcel 3 (Corn) thoroughly to save the dry crop and ensure the ears develop fully for the upcoming harvest.\n2. **July 10, 2026:** Prune your cacao trees in Parcel 1 (P1). This lets air and sunlight into the trees, which prevents dangerous fungal diseases like Frosty Pod Rot (*Monilia*).\n3. **July 15, 2026:** Walk through Parcel 2 (Banana) and inspect the leaves carefully for any dark streaks, which are early signs of Black Sigatoka disease.\n4. **August 15, 2026:** Harvest your corn in Parcel 3 and clear away all dry crop residues to keep the soil clean.\n\n### 6-Month Crop Calendar (July 2026 \u2013 January 2027)\n\n| Month | Parcel | Crop | Activity | Expected Outcome |\n| :--- | :--- | :--- | :--- | :--- |\n| **July 2026** | P3 <br> P1 <br> P2 | Corn <br> Cacao <br> Banana | \u2022 Irrigate immediately <br> \u2022 Prune cacao trees (July 10) <br> \u2022 Inspect banana leaves (July 15) | \u2022 Save corn yield <br> \u2022 Prevent cacao fungi <br> \u2022 Early disease detection |\n| **August 2026** | P3 | Corn | Harvest corn and clear the parcel | Generate immediate cash; clean field |\n| **Sept - Oct 2026**| P3 | - | Allow parcel soil to rest and prepare land | Restore soil health for next cycle |\n| **November 2026** | P1 | Cacao | Begin main cacao harvest | High-value income from cacao beans |\n| **December 2026** | P3 | Corn | Apply basic organic fertilizer/compost | Prepare soil for winter planting |\n| **January 2027** | P3 | Corn | Plant winter corn seed | Utilize the winter rains to save irrigation costs |\n\n---\n\n**ECONOMIC JUSTIFICATION:**  \nIrrigating your corn in Parcel 3 today will cost a small amount in fuel or water pump usage, but it saves your entire 1-hectare corn crop from failing right before the August harvest. This guarantees you have corn to sell, protecting your investment. Pruning your cacao now protects your highest-value crop (cacao) ahead of the main harvest in November, ensuring you get top prices for healthy, disease-free beans.\n\n---\n\n**ALERT:**  \nBecause Parcel 3 (Corn) is dry and stressed, it is highly attractive to pests like the fall armyworm. Since Parcel 3 sits right next to your healthy Banana (P2) and Cacao (P1) parcels, check the borders of those healthy fields daily. Pests from the dry corn may try to move into your healthy crops to find moisture.\n\n---\n\n```json\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Water Stress\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation of dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees for disease prevention\",\n      \"due_date\": \"2026-07-10\"\n    },\n    {\n      \"parcel\": \"P2\",\n      \"action\": \"Inspect banana leaves for Black Sigatoka\",\n      \"due_date\": \"2026-07-15\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation to save dry corn in Parcel 3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation\"\n    },\n    {\n      \"date\": \"2026-07-10\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Pruning cacao trees\"\n    },\n    {\n      \"date\": \"2026-07-15\",\n      \"parcel\": \"P2\",\n      \"activity\": \"Banana leaf Sigatoka inspection\"\n    },\n    {\n      \"date\": \"2026-08-15\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Harvest corn and clear dry residue\"\n    },\n    {\n      \"date\": \"2026-11-15\",\n      \"parcel\": \"P1\",\n      \"activity\": \"Main Cacao Harvest begins\"\n    },\n    {\n      \"date\": \"2027-01-05\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Plant winter corn to utilize rainy season\"\n    }\n  ]\n}\n```",
+        "response_raw_json": "{\n  \"parts\": [\n    {\n      \"text\": \"**OBSERVATION:**  \\nYour corn crop in Parcel 3 (P3) is suffering from severe water stress and is currently very dry. Fortunately, your Cacao (Parcel 1) and Banana (Parcel 2) crops are currently in healthy condition. \\n\\n---\\n\\n**CONTEXT:**  \\nIn El Carmen, Manab\u00ed, maintaining proper water levels is critical for corn, especially as it approaches its harvest window next month. Without immediate water, the corn ears will not fill properly, leading to a major loss in crop weight and quality. Additionally, your cacao and banana crops require preventive care (pruning and leaf inspections) this month to keep them healthy and disease-free before the wetter months arrive.\\n\\n---\\n\\n**ACTION:**  \\nHere is your step-by-step plan for the next few days and months:\\n\\n1. **IMMEDIATE (Next 24 Hours):** Irrigate Parcel 3 (Corn) thoroughly to save the dry crop and ensure the ears develop fully for the upcoming harvest.\\n2. **July 10, 2026:** Prune your cacao trees in Parcel 1 (P1). This lets air and sunlight into the trees, which prevents dangerous fungal diseases like Frosty Pod Rot (*Monilia*).\\n3. **July 15, 2026:** Walk through Parcel 2 (Banana) and inspect the leaves carefully for any dark streaks, which are early signs of Black Sigatoka disease.\\n4. **August 15, 2026:** Harvest your corn in Parcel 3 and clear away all dry crop residues to keep the soil clean.\\n\\n### 6-Month Crop Calendar (July 2026 \u2013 January 2027)\\n\\n| Month | Parcel | Crop | Activity | Expected Outcome |\\n| :--- | :--- | :--- | :--- | :--- |\\n| **July 2026** | P3 <br> P1 <br> P2 | Corn <br> Cacao <br> Banana | \u2022 Irrigate immediately <br> \u2022 Prune cacao trees (July 10) <br> \u2022 Inspect banana leaves (July 15) | \u2022 Save corn yield <br> \u2022 Prevent cacao fungi <br> \u2022 Early disease detection |\\n| **August 2026** | P3 | Corn | Harvest corn and clear the parcel | Generate immediate cash; clean field |\\n| **Sept - Oct 2026**| P3 | - | Allow parcel soil to rest and prepare land | Restore soil health for next cycle |\\n| **November 2026** | P1 | Cacao | Begin main cacao harvest | High-value income from cacao beans |\\n| **December 2026** | P3 | Corn | Apply basic organic fertilizer/compost | Prepare soil for winter planting |\\n| **January 2027** | P3 | Corn | Plant winter corn seed | Utilize the winter rains to save irrigation costs |\\n\\n---\\n\\n**ECONOMIC JUSTIFICATION:**  \\nIrrigating your corn in Parcel 3 today will cost a small amount in fuel or water pump usage, but it saves your entire 1-hectare corn crop from failing right before the August harvest. This guarantees you have corn to sell, protecting your investment. Pruning your cacao now protects your highest-value crop (cacao) ahead of the main harvest in November, ensuring you get top prices for healthy, disease-free beans.\\n\\n---\\n\\n**ALERT:**  \\nBecause Parcel 3 (Corn) is dry and stressed, it is highly attractive to pests like the fall armyworm. Since Parcel 3 sits right next to your healthy Banana (P2) and Cacao (P1) parcels, check the borders of those healthy fields daily. Pests from the dry corn may try to move into your healthy crops to find moisture.\\n\\n---\\n\\n```json\\n[INDICATORS]\\n{\\n  \\\"parcel_health\\\": {\\n    \\\"P1\\\": \\\"Healthy\\\",\\n    \\\"P2\\\": \\\"Healthy\\\",\\n    \\\"P3\\\": \\\"Water Stress\\\"\\n  },\\n  \\\"pending_actions\\\": [\\n    {\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"action\\\": \\\"Urgent irrigation of dry corn\\\",\\n      \\\"due_date\\\": \\\"2026-07-06\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"action\\\": \\\"Pruning cacao trees for disease prevention\\\",\\n      \\\"due_date\\\": \\\"2026-07-10\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P2\\\",\\n      \\\"action\\\": \\\"Inspect banana leaves for Black Sigatoka\\\",\\n      \\\"due_date\\\": \\\"2026-07-15\\\"\\n    }\\n  ],\\n  \\\"next_activity\\\": {\\n    \\\"description\\\": \\\"Urgent irrigation to save dry corn in Parcel 3\\\",\\n    \\\"date\\\": \\\"2026-07-06\\\"\\n  },\\n  \\\"crop_plan_updates\\\": [\\n    {\\n      \\\"date\\\": \\\"2026-07-06\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Urgent irrigation\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-10\\\",\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"activity\\\": \\\"Pruning cacao trees\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-15\\\",\\n      \\\"parcel\\\": \\\"P2\\\",\\n      \\\"activity\\\": \\\"Banana leaf Sigatoka inspection\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-08-15\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Harvest corn and clear dry residue\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-11-15\\\",\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"activity\\\": \\\"Main Cacao Harvest begins\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2027-01-05\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Plant winter corn to utilize rainy season\\\"\\n    }\\n  ]\\n}\\n```\"\n    }\n  ],\n  \"role\": \"model\"\n}",
+        "intermediate_events": null,
+        "agent_data": "{\"agents\": {\"croppulse_workflow\": {\"agent_id\": \"croppulse_workflow\", \"agent_type\": \"Workflow\", \"description\": \"\", \"tools\": [], \"sub_agents\": []}}, \"turns\": [{\"turn_index\": 0, \"turn_id\": \"turn_0\", \"events\": [{\"author\": \"router_agent\", \"content\": {\"parts\": [{\"text\": \"{\\n  \\\"intent\\\": \\\"GENERAL_QUESTION\\\",\\n  \\\"mode\\\": 1,\\n  \\\"confidence\\\": 1.0\\n}\"}], \"role\": \"model\"}}, {\"author\": \"advisory_agent\", \"content\": {\"parts\": [{\"text\": \"**OBSERVATION:**  \\nYour corn crop in Parcel 3 (P3) is suffering from severe water stress and is currently very dry. Fortunately, your Cacao (Parcel 1) and Banana (Parcel 2) crops are currently in healthy condition. \\n\\n---\\n\\n**CONTEXT:**  \\nIn El Carmen, Manab\u00ed, maintaining proper water levels is critical for corn, especially as it approaches its harvest window next month. Without immediate water, the corn ears will not fill properly, leading to a major loss in crop weight and quality. Additionally, your cacao and banana crops require preventive care (pruning and leaf inspections) this month to keep them healthy and disease-free before the wetter months arrive.\\n\\n---\\n\\n**ACTION:**  \\nHere is your step-by-step plan for the next few days and months:\\n\\n1. **IMMEDIATE (Next 24 Hours):** Irrigate Parcel 3 (Corn) thoroughly to save the dry crop and ensure the ears develop fully for the upcoming harvest.\\n2. **July 10, 2026:** Prune your cacao trees in Parcel 1 (P1). This lets air and sunlight into the trees, which prevents dangerous fungal diseases like Frosty Pod Rot (*Monilia*).\\n3. **July 15, 2026:** Walk through Parcel 2 (Banana) and inspect the leaves carefully for any dark streaks, which are early signs of Black Sigatoka disease.\\n4. **August 15, 2026:** Harvest your corn in Parcel 3 and clear away all dry crop residues to keep the soil clean.\\n\\n### 6-Month Crop Calendar (July 2026 \u2013 January 2027)\\n\\n| Month | Parcel | Crop | Activity | Expected Outcome |\\n| :--- | :--- | :--- | :--- | :--- |\\n| **July 2026** | P3 <br> P1 <br> P2 | Corn <br> Cacao <br> Banana | \u2022 Irrigate immediately <br> \u2022 Prune cacao trees (July 10) <br> \u2022 Inspect banana leaves (July 15) | \u2022 Save corn yield <br> \u2022 Prevent cacao fungi <br> \u2022 Early disease detection |\\n| **August 2026** | P3 | Corn | Harvest corn and clear the parcel | Generate immediate cash; clean field |\\n| **Sept - Oct 2026**| P3 | - | Allow parcel soil to rest and prepare land | Restore soil health for next cycle |\\n| **November 2026** | P1 | Cacao | Begin main cacao harvest | High-value income from cacao beans |\\n| **December 2026** | P3 | Corn | Apply basic organic fertilizer/compost | Prepare soil for winter planting |\\n| **January 2027** | P3 | Corn | Plant winter corn seed | Utilize the winter rains to save irrigation costs |\\n\\n---\\n\\n**ECONOMIC JUSTIFICATION:**  \\nIrrigating your corn in Parcel 3 today will cost a small amount in fuel or water pump usage, but it saves your entire 1-hectare corn crop from failing right before the August harvest. This guarantees you have corn to sell, protecting your investment. Pruning your cacao now protects your highest-value crop (cacao) ahead of the main harvest in November, ensuring you get top prices for healthy, disease-free beans.\\n\\n---\\n\\n**ALERT:**  \\nBecause Parcel 3 (Corn) is dry and stressed, it is highly attractive to pests like the fall armyworm. Since Parcel 3 sits right next to your healthy Banana (P2) and Cacao (P1) parcels, check the borders of those healthy fields daily. Pests from the dry corn may try to move into your healthy crops to find moisture.\\n\\n---\\n\\n```json\\n[INDICATORS]\\n{\\n  \\\"parcel_health\\\": {\\n    \\\"P1\\\": \\\"Healthy\\\",\\n    \\\"P2\\\": \\\"Healthy\\\",\\n    \\\"P3\\\": \\\"Water Stress\\\"\\n  },\\n  \\\"pending_actions\\\": [\\n    {\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"action\\\": \\\"Urgent irrigation of dry corn\\\",\\n      \\\"due_date\\\": \\\"2026-07-06\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"action\\\": \\\"Pruning cacao trees for disease prevention\\\",\\n      \\\"due_date\\\": \\\"2026-07-10\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P2\\\",\\n      \\\"action\\\": \\\"Inspect banana leaves for Black Sigatoka\\\",\\n      \\\"due_date\\\": \\\"2026-07-15\\\"\\n    }\\n  ],\\n  \\\"next_activity\\\": {\\n    \\\"description\\\": \\\"Urgent irrigation to save dry corn in Parcel 3\\\",\\n    \\\"date\\\": \\\"2026-07-06\\\"\\n  },\\n  \\\"crop_plan_updates\\\": [\\n    {\\n      \\\"date\\\": \\\"2026-07-06\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Urgent irrigation\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-10\\\",\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"activity\\\": \\\"Pruning cacao trees\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-15\\\",\\n      \\\"parcel\\\": \\\"P2\\\",\\n      \\\"activity\\\": \\\"Banana leaf Sigatoka inspection\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-08-15\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Harvest corn and clear dry residue\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-11-15\\\",\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"activity\\\": \\\"Main Cacao Harvest begins\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2027-01-05\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Plant winter corn to utilize rainy season\\\"\\n    }\\n  ]\\n}\\n```\"}], \"role\": \"model\"}}]}]}"
+      },
+      {
+        "prompt_display_text": "What is the capital of France?",
+        "prompt_raw_json": "{\n  \"parts\": [\n    {\n      \"text\": \"What is the capital of France?\"\n    }\n  ],\n  \"role\": \"user\"\n}",
+        "reference": "The capital of France is Paris.",
+        "reference_raw_json": "{\n  \"parts\": [\n    {\n      \"text\": \"The capital of France is Paris.\"\n    }\n  ],\n  \"role\": \"model\"\n}",
+        "response_display_text": "### OBSERVATION\nOur records show that **Parcel P3 (Corn)** is experiencing water stress and is currently dry. **Parcel P1 (Cacao)** and **Parcel P2 (Banana)** are currently healthy. Additionally, our historical farm records show that **Parcel C2** is suffering from a nutrient deficiency and needs fertilizer.\n\n---\n\n### CONTEXT\nYour farm is located in El Carmen, Manab\u00ed, Ecuador. Although we do not have current weather or market data, we know that July is typically a drier month in your region. Because your corn in Parcel P3 is drying out, we must act immediately to irrigate it before its scheduled harvest in August. \n\nKeeping your crops well-watered and fertilized now will protect your upcoming harvests and keep your soil healthy.\n\n---\n\n### ACTION\nHere is your step-by-step action plan for the next few months to keep your farm productive:\n\n#### Urgent Tasks (This Week)\n*   **July 6, 2026 (Today) - Parcel P3 (Corn):** Apply urgent irrigation to the dry corn immediately to save the crop before harvest.\n*   **July 8, 2026 - Parcel C2:** Apply NPK 15-15-15 fertilizer to correct the nutrient deficiency.\n\n#### Upcoming Activities (Crop Calendar: July 2026 - January 2027)\n*   **July 10, 2026 - Parcel P1 (Cacao):** Prune your cacao trees. This lets in sunlight and air, which prevents diseases.\n*   **July 15, 2026 - Parcel P2 (Banana):** Inspect the banana leaves closely for any signs of Black Sigatoka (dark spots or stripes).\n*   **August 15, 2026 - Parcel P3 (Corn):** Harvest your corn and clear all the dry crop residues from the field.\n*   **November 15, 2026 - Parcel P1 (Cacao):** Begin your main cacao harvest.\n*   **January 5, 2027 - Parcel P3 (Corn):** Plant your new winter corn crop to make the most of the upcoming rainy season.\n\n---\n\n### ECONOMIC JUSTIFICATION\n*   **Watering your Corn (P3):** Spending a small amount of money and time on irrigation now protects your investment in seeds and labor. It ensures you will have a good corn harvest in August instead of losing the crop to dryness.\n*   **Pruning Cacao (P1):** Pruning prevents fungal diseases. It is much cheaper to prune today than to buy expensive chemical sprays later when the trees get sick.\n\n---\n\n### ALERT\nDry corn stalks in **Parcel P3** can catch fire easily during dry weeks. Clean up dry weeds around the borders of this parcel to protect the adjacent healthy **Banana (P2)** and **Cacao (P1)** trees. Also, make sure to treat the nutrient deficiency in **Parcel C2** so it does not spread or reduce your overall farm yield.\n\n---\n\n[INDICATORS]\n{\n  \"parcel_health\": {\n    \"P1\": \"Healthy\",\n    \"P2\": \"Healthy\",\n    \"P3\": \"Water Stress\",\n    \"C2\": \"Nutrient Deficiency\"\n  },\n  \"pending_actions\": [\n    {\n      \"parcel\": \"P3\",\n      \"action\": \"Urgent irrigation of dry corn\",\n      \"due_date\": \"2026-07-06\"\n    },\n    {\n      \"parcel\": \"C2\",\n      \"action\": \"Apply NPK 15-15-15 fertilizer\",\n      \"due_date\": \"2026-07-08\"\n    },\n    {\n      \"parcel\": \"P1\",\n      \"action\": \"Pruning cacao trees\",\n      \"due_date\": \"2026-07-10\"\n    }\n  ],\n  \"next_activity\": {\n    \"description\": \"Urgent irrigation of dry corn on Parcel P3\",\n    \"date\": \"2026-07-06\"\n  },\n  \"crop_plan_updates\": [\n    {\n      \"date\": \"2026-07-06\",\n      \"parcel\": \"P3\",\n      \"activity\": \"Urgent irrigation to save dry corn\"\n    },\n    {\n      \"date\": \"2026-07-08\",\n      \"parcel\": \"C2\",\n      \"activity\": \"Apply NPK 15-15-15 fertilizer\"\n    }\n  ]\n}",
+        "response_raw_json": "{\n  \"parts\": [\n    {\n      \"text\": \"### OBSERVATION\\nOur records show that **Parcel P3 (Corn)** is experiencing water stress and is currently dry. **Parcel P1 (Cacao)** and **Parcel P2 (Banana)** are currently healthy. Additionally, our historical farm records show that **Parcel C2** is suffering from a nutrient deficiency and needs fertilizer.\\n\\n---\\n\\n### CONTEXT\\nYour farm is located in El Carmen, Manab\u00ed, Ecuador. Although we do not have current weather or market data, we know that July is typically a drier month in your region. Because your corn in Parcel P3 is drying out, we must act immediately to irrigate it before its scheduled harvest in August. \\n\\nKeeping your crops well-watered and fertilized now will protect your upcoming harvests and keep your soil healthy.\\n\\n---\\n\\n### ACTION\\nHere is your step-by-step action plan for the next few months to keep your farm productive:\\n\\n#### Urgent Tasks (This Week)\\n*   **July 6, 2026 (Today) - Parcel P3 (Corn):** Apply urgent irrigation to the dry corn immediately to save the crop before harvest.\\n*   **July 8, 2026 - Parcel C2:** Apply NPK 15-15-15 fertilizer to correct the nutrient deficiency.\\n\\n#### Upcoming Activities (Crop Calendar: July 2026 - January 2027)\\n*   **July 10, 2026 - Parcel P1 (Cacao):** Prune your cacao trees. This lets in sunlight and air, which prevents diseases.\\n*   **July 15, 2026 - Parcel P2 (Banana):** Inspect the banana leaves closely for any signs of Black Sigatoka (dark spots or stripes).\\n*   **August 15, 2026 - Parcel P3 (Corn):** Harvest your corn and clear all the dry crop residues from the field.\\n*   **November 15, 2026 - Parcel P1 (Cacao):** Begin your main cacao harvest.\\n*   **January 5, 2027 - Parcel P3 (Corn):** Plant your new winter corn crop to make the most of the upcoming rainy season.\\n\\n---\\n\\n### ECONOMIC JUSTIFICATION\\n*   **Watering your Corn (P3):** Spending a small amount of money and time on irrigation now protects your investment in seeds and labor. It ensures you will have a good corn harvest in August instead of losing the crop to dryness.\\n*   **Pruning Cacao (P1):** Pruning prevents fungal diseases. It is much cheaper to prune today than to buy expensive chemical sprays later when the trees get sick.\\n\\n---\\n\\n### ALERT\\nDry corn stalks in **Parcel P3** can catch fire easily during dry weeks. Clean up dry weeds around the borders of this parcel to protect the adjacent healthy **Banana (P2)** and **Cacao (P1)** trees. Also, make sure to treat the nutrient deficiency in **Parcel C2** so it does not spread or reduce your overall farm yield.\\n\\n---\\n\\n[INDICATORS]\\n{\\n  \\\"parcel_health\\\": {\\n    \\\"P1\\\": \\\"Healthy\\\",\\n    \\\"P2\\\": \\\"Healthy\\\",\\n    \\\"P3\\\": \\\"Water Stress\\\",\\n    \\\"C2\\\": \\\"Nutrient Deficiency\\\"\\n  },\\n  \\\"pending_actions\\\": [\\n    {\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"action\\\": \\\"Urgent irrigation of dry corn\\\",\\n      \\\"due_date\\\": \\\"2026-07-06\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"C2\\\",\\n      \\\"action\\\": \\\"Apply NPK 15-15-15 fertilizer\\\",\\n      \\\"due_date\\\": \\\"2026-07-08\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"action\\\": \\\"Pruning cacao trees\\\",\\n      \\\"due_date\\\": \\\"2026-07-10\\\"\\n    }\\n  ],\\n  \\\"next_activity\\\": {\\n    \\\"description\\\": \\\"Urgent irrigation of dry corn on Parcel P3\\\",\\n    \\\"date\\\": \\\"2026-07-06\\\"\\n  },\\n  \\\"crop_plan_updates\\\": [\\n    {\\n      \\\"date\\\": \\\"2026-07-06\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Urgent irrigation to save dry corn\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-08\\\",\\n      \\\"parcel\\\": \\\"C2\\\",\\n      \\\"activity\\\": \\\"Apply NPK 15-15-15 fertilizer\\\"\\n    }\\n  ]\\n}\"\n    }\n  ],\n  \"role\": \"model\"\n}",
+        "intermediate_events": null,
+        "agent_data": "{\"agents\": {\"croppulse_workflow\": {\"agent_id\": \"croppulse_workflow\", \"agent_type\": \"Workflow\", \"description\": \"\", \"tools\": [], \"sub_agents\": []}}, \"turns\": [{\"turn_index\": 0, \"turn_id\": \"turn_0\", \"events\": [{\"author\": \"router_agent\", \"content\": {\"parts\": [{\"text\": \"{\\\"intent\\\": \\\"GENERAL_QUESTION\\\", \\\"mode\\\": 1, \\\"confidence\\\": 1.0}\"}], \"role\": \"model\"}}, {\"author\": \"advisory_agent\", \"content\": {\"parts\": [{\"text\": \"### OBSERVATION\\nOur records show that **Parcel P3 (Corn)** is experiencing water stress and is currently dry. **Parcel P1 (Cacao)** and **Parcel P2 (Banana)** are currently healthy. Additionally, our historical farm records show that **Parcel C2** is suffering from a nutrient deficiency and needs fertilizer.\\n\\n---\\n\\n### CONTEXT\\nYour farm is located in El Carmen, Manab\u00ed, Ecuador. Although we do not have current weather or market data, we know that July is typically a drier month in your region. Because your corn in Parcel P3 is drying out, we must act immediately to irrigate it before its scheduled harvest in August. \\n\\nKeeping your crops well-watered and fertilized now will protect your upcoming harvests and keep your soil healthy.\\n\\n---\\n\\n### ACTION\\nHere is your step-by-step action plan for the next few months to keep your farm productive:\\n\\n#### Urgent Tasks (This Week)\\n*   **July 6, 2026 (Today) - Parcel P3 (Corn):** Apply urgent irrigation to the dry corn immediately to save the crop before harvest.\\n*   **July 8, 2026 - Parcel C2:** Apply NPK 15-15-15 fertilizer to correct the nutrient deficiency.\\n\\n#### Upcoming Activities (Crop Calendar: July 2026 - January 2027)\\n*   **July 10, 2026 - Parcel P1 (Cacao):** Prune your cacao trees. This lets in sunlight and air, which prevents diseases.\\n*   **July 15, 2026 - Parcel P2 (Banana):** Inspect the banana leaves closely for any signs of Black Sigatoka (dark spots or stripes).\\n*   **August 15, 2026 - Parcel P3 (Corn):** Harvest your corn and clear all the dry crop residues from the field.\\n*   **November 15, 2026 - Parcel P1 (Cacao):** Begin your main cacao harvest.\\n*   **January 5, 2027 - Parcel P3 (Corn):** Plant your new winter corn crop to make the most of the upcoming rainy season.\\n\\n---\\n\\n### ECONOMIC JUSTIFICATION\\n*   **Watering your Corn (P3):** Spending a small amount of money and time on irrigation now protects your investment in seeds and labor. It ensures you will have a good corn harvest in August instead of losing the crop to dryness.\\n*   **Pruning Cacao (P1):** Pruning prevents fungal diseases. It is much cheaper to prune today than to buy expensive chemical sprays later when the trees get sick.\\n\\n---\\n\\n### ALERT\\nDry corn stalks in **Parcel P3** can catch fire easily during dry weeks. Clean up dry weeds around the borders of this parcel to protect the adjacent healthy **Banana (P2)** and **Cacao (P1)** trees. Also, make sure to treat the nutrient deficiency in **Parcel C2** so it does not spread or reduce your overall farm yield.\\n\\n---\\n\\n[INDICATORS]\\n{\\n  \\\"parcel_health\\\": {\\n    \\\"P1\\\": \\\"Healthy\\\",\\n    \\\"P2\\\": \\\"Healthy\\\",\\n    \\\"P3\\\": \\\"Water Stress\\\",\\n    \\\"C2\\\": \\\"Nutrient Deficiency\\\"\\n  },\\n  \\\"pending_actions\\\": [\\n    {\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"action\\\": \\\"Urgent irrigation of dry corn\\\",\\n      \\\"due_date\\\": \\\"2026-07-06\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"C2\\\",\\n      \\\"action\\\": \\\"Apply NPK 15-15-15 fertilizer\\\",\\n      \\\"due_date\\\": \\\"2026-07-08\\\"\\n    },\\n    {\\n      \\\"parcel\\\": \\\"P1\\\",\\n      \\\"action\\\": \\\"Pruning cacao trees\\\",\\n      \\\"due_date\\\": \\\"2026-07-10\\\"\\n    }\\n  ],\\n  \\\"next_activity\\\": {\\n    \\\"description\\\": \\\"Urgent irrigation of dry corn on Parcel P3\\\",\\n    \\\"date\\\": \\\"2026-07-06\\\"\\n  },\\n  \\\"crop_plan_updates\\\": [\\n    {\\n      \\\"date\\\": \\\"2026-07-06\\\",\\n      \\\"parcel\\\": \\\"P3\\\",\\n      \\\"activity\\\": \\\"Urgent irrigation to save dry corn\\\"\\n    },\\n    {\\n      \\\"date\\\": \\\"2026-07-08\\\",\\n      \\\"parcel\\\": \\\"C2\\\",\\n      \\\"activity\\\": \\\"Apply NPK 15-15-15 fertilizer\\\"\\n    }\\n  ]\\n}\"}], \"role\": \"model\"}}]}]}"
+      }
+    ]
+  },
+  "agent_info": null
+}
