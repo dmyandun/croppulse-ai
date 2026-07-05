@@ -1,3 +1,19 @@
+"""
+Vision Agent - CropPulse AI
+========================
+
+Role:
+A specialized multimodal agent. It handles raw image artifacts uploaded by the
+farmer and executes visual diagnostics using one of 7 distinct agricultural analysis
+modes (Soil, Nutrient, Weed, Disease, Water stress, Maturity, Quality grading).
+
+Design Isolation:
+The Vision Agent is completely isolated from direct user conversation. It outputs a
+structured diagnostic JSON payload that is ingested by the compile advisory node.
+This ensures visual findings are fused with weather, market, and farm grid data
+before final advice is composed, avoiding context pollution.
+"""
+
 from google.adk import Agent, Context
 from google.adk.models import Gemini
 

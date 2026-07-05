@@ -1,7 +1,19 @@
 """
 Weather Node - CropPulse AI
+==========================
+
 Calls the Weather MCP server to fetch current conditions, 7-day forecast,
 and historical rainfall for the farm's location.
+
+Why MCP instead of hardcoded API calls?
+1.  **Decoupling:** Standardizes tool execution under the Model Context Protocol (MCP).
+    Changes to weather endpoints (e.g. switching weather APIs) do not require changes
+    to the agent or node orchestration code.
+2.  **Security & Sandboxing:** Stdio transport client session architecture runs the MCP
+    server as a separate process, isolating credentials and database access from the main
+    web app environment.
+3.  **Harness Compatibility:** Allows the ADK system to inspect, mock, and auto-grade
+    external database calls cleanly during evaluation phases.
 """
 
 from __future__ import annotations

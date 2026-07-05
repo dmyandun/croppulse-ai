@@ -1,3 +1,74 @@
+"""
+CropPulse AI Workflow & Architecture Configuration (ADK 2.0)
+============================================================
+
+This module defines the execution graph, conditional routing, and context compiling
+pipelines for CropPulse AI.
+
+Architecture Overview
+---------------------
+We chose a directed graph workflow (ADK 2.0 Graph) rather than a linear or conversational
+chain for several critical reasons:
+1.  **Deterministic Control Flow:** Agriculture advice demands strict execution patterns.
+    By defining explicit edges, we ensure that security screens run first and last,
+    and sheets database lookups happen before the routing decisions.
+2.  **Conditional Branching:** Depending on whether an image is attached and the user's intent
+    (classified by the Router Agent), execution must branch. For example, text-only questions
+    bypass the Vision Agent and go directly to compile advisory inputs, saving time and API cost.
+3.  **Parallel Execution:** Independent context-gathering nodes (Weather and Markets) run
+    concurrently once the primary image or intent is resolved, maximizing throughput.
+4.  **State Isolation & Context Fusion:** The graph uses a shared `ctx.state` object to
+    accumulate context across nodes, preventing LLM context pollution and ensuring the final
+    Advisory Agent receives clean, structured data.
+
+Agent Roles and System Interaction
+----------------------------------
+-   **Router Agent (agents/router_agent.py):** The gateway agent. It inspects the farmer's
+    query and image metadata to classify user intent into one of 9 modes (e.g. Soil Analysis,
+    Disease Diagnosis). It returns a structured JSON classification used by the router function
+    `route_after_router` to dynamically direct graph traversal.
+-   **Vision Agent (agents/vision_agent.py):** A multimodal specialist. It executes deep
+    visual diagnostics on uploaded photos using 7 specialized agronomy modes (e.g., Von
+    Loesecke banana maturity scale, leaf necrosis pattern matching). Crucially, the Vision Agent
+    does not talk to the user; it outputs a raw JSON assessment that feeds into the fusion layer.
+-   **Advisory Agent (agents/advisory_agent.py):** The only farmer-facing agent. It takes
+    the compiled input prompt, fuses all available data, and writes a highly structured,
+    personable response back to the farmer in simple, jargon-free English.
+
+Cross-Signal Intelligence (4-Signal Fusion)
+-------------------------------------------
+The core intelligence layer relies on fusing 4 distinct signals in `compile_advisory_input`:
+1.  **Vision assessment:** Localised plant, leaf, or soil visual characteristics.
+2.  **Weather conditions:** Current data + 7-day forecast + 14-day historical rain.
+3.  **Market trends:** Spot commodity prices + 30-day historical trajectories.
+4.  **Farm context:** The physical farm grid layout, crop plan, and historical performance.
+Fusing these allows the Advisory Agent to make cross-domain insights. For example, if a leaf shows
+mild dehydration (Vision Signal) but the weather forecast predicts 80mm of rain (Weather Signal)
+and market prices for the crop are falling (Market Signal), the agent will recommend *delaying*
+costly supplemental irrigation to optimize the farmer's bottom line.
+
+Model Context Protocol (MCP) Modularity
+---------------------------------------
+Instead of hardcoding external API clients (like weather or market databases) directly into
+the agent instructions or codebase, CropPulse AI uses Model Context Protocol (MCP) servers:
+-   `weather_mcp.py` dynamically queries meteorology services.
+-   `market_mcp.py` runs date-seeded deterministic price history generators.
+-   `sheets_mcp.py` acts as our persistent relational database layer.
+MCP decouples the agent logic from data ingestion, allowing servers to be updated, sandboxed,
+or swapped out without rebuilding or re-tuning the core LLM agents.
+
+Security Screen Implementation
+------------------------------
+To ensure safety in agricultural recommendations and protect against standard LLM failures:
+-   **Security Input Node (`security_input_validation`):** Runs immediately at `START` to
+    truncate input length (guarding against cost bloating/token-stuffing), detect prompt injection
+    techniques, and strip EXIF location metadata from uploaded images.
+-   **Security Output Node (`security_output_validation`):** Runs after the advisory text is written
+    and saved. It scans for excessive chemical dosage recommendations, appends disclaimers if
+    the diagnosis confidence is low (<70% or prose-based uncertainty), and redacts PII data
+    (cédulas, email, phone) to prevent sheets-sourced privacy leaks.
+"""
+
 import json
 
 from google.adk import Context, Workflow

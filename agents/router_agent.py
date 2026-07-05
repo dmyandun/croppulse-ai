@@ -1,3 +1,18 @@
+"""
+Router Agent - CropPulse AI
+==========================
+
+Role:
+Acts as the initial parsing layer of the AI workflow. Classifies the farmer's
+message + image presence into one of 9 agricultural intents (e.g. soil analysis,
+pest diagnosis, maturity assessment) and outputs a clean JSON classification.
+
+Dynamic Routing:
+The graph topology uses the classification results of the Router Agent to determine
+if the workflow branches to the multimodal Vision Agent or bypasses it to gather
+ambient contextual signals (Weather/Market) directly.
+"""
+
 from google.adk import Agent
 from google.adk.models import Gemini
 

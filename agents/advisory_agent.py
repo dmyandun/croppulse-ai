@@ -1,3 +1,20 @@
+"""
+Advisory Agent - CropPulse AI
+============================
+
+Role:
+This is the ONLY farmer-facing agent in the entire graph. It compiles findings
+from multiple upstream modules (Vision Agent, Weather MCP, Market MCP, and Sheets
+Farm Context) to generate cohesive, actionable, and financially-justified advice.
+
+4-Signal Fusion Integration:
+By taking in four independent signals, the Advisory Agent avoids myopic agronomy recommendations:
+1.  **Vision Diagnosis:** Recognises crop issues (e.g. black sigatoka, nutrient deficiencies).
+2.  **Weather conditions:** Evaluates weather constraints (e.g. heavy rain forecast affects spray timing).
+3.  **Market trends:** Integrates financial indicators (e.g. high cocoa prices justify extra disease treatments).
+4.  **Farm Context:** Ensures advice respects neighboring crops and existing plans on the farm grid.
+"""
+
 from google.adk import Agent
 from google.adk.models import Gemini
 

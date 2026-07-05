@@ -256,6 +256,34 @@
       "diagnosis": "Based on your farm data, your corn crop in **Parcel P3** is suffering from severe water stress and is currently very dry. Your cacao (**Parcel P1**) and banana (**Parcel P2**) crops are currently heal",
       "recommendation": "Here is your step-by-step action plan for the coming weeks:",
       "date": "2026-07-04 22:13"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 1 — GENERAL_QUESTION",
+      "diagnosis": "We have reviewed your farm layout and current crop plan. Your cacao (Parcel 1) and banana plants (Parcel 2) are currently in **Healthy** condition. However, your corn crop in Parcel 3 is suffering fro",
+      "recommendation": "Here is your step-by-step action plan to save your corn and protect your other crops:",
+      "date": "2026-07-04 22:21"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 1 — GENERAL_QUESTION",
+      "diagnosis": "You have requested a general review of your farm's status. Your farm grid shows that your Cacao (Parcel P1) and Bananas (Parcel P2) are currently healthy. However, your Corn (Parcel P3) is in critical",
+      "recommendation": "12-MONTH CROP PLAN & CALENDAR\nTo keep your farm productive and profitable, follow this step-by-step plan:",
+      "date": "2026-07-04 22:22"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 9 — GENERAL_QUESTION",
+      "diagnosis": "Based on your farm records, the corn crop in **Parcel 3 (P3)** is dry and suffering from severe water stress. It needs water immediately to survive. On the other hand, your cacao in **Parcel 1 (P1)** ",
+      "recommendation": "You must act quickly to save your corn and prepare your other crops:",
+      "date": "2026-07-04 22:22"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 9 — GENERAL_QUESTION",
+      "diagnosis": "*   **Parcel P3 (Corn):** Is experiencing severe dry conditions and urgent water stress.\n*   **Parcel P1 (Cacao):** Currently healthy, but scheduled maintenance is due.\n*   **Parcel P2 (Banana):** Cur",
+      "recommendation": "1.  **IMMEDIATE ACTION (Next 24 Hours):** Irrigate **Parcel P3 (Corn)** immediately. It is dry and needs water right away to survive.\n2.  **BY JULY 10, 2026:** Prune your cacao trees in **Parcel P1**.",
+      "date": "2026-07-04 22:23"
     }
   ]
 }

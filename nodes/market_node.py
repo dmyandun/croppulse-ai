@@ -1,7 +1,19 @@
 """
 Market Node - CropPulse AI
+=========================
+
 Calls the Market MCP server to fetch current commodity spot prices
 and price trend history for all crops on the farm.
+
+Why MCP instead of hardcoded API calls?
+1.  **Decoupling:** Standardizes tool execution under the Model Context Protocol (MCP).
+    Changes to market endpoints or commodities data logic do not require rebuilding
+    or altering the core node orchestration scripts.
+2.  **Modularity:** Multiple agents or nodes can request market prices through the
+    standardized `StdioServerParameters` process management, creating a clean service-oriented
+    architecture.
+3.  **Harness Compatibility:** Allows the ADK system to inspect, mock, and auto-grade
+    external database calls cleanly during evaluation phases.
 """
 
 from __future__ import annotations
