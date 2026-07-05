@@ -368,6 +368,13 @@ async def security_input_validation(ctx, node_input: str) -> str:
     # tags that reveal their precise farm location — a privacy risk if logs or
     # Sheets data are ever accessed by third parties.
     # We also enforce MIME type and size limits to prevent malicious file uploads.
+
+    # Reset the has_image flag every turn so a text-only follow-up message
+    # doesn't inherit True from a previous image-bearing turn on the same
+    # session. route_after_router (workflow.py) reads this to decide whether
+    # to route into vision_agent.
+    ctx.state["has_image"] = False
+
     try:
         # Retrieve the list of artifact names attached to this session turn.
         # ADK stores uploaded files as session artifacts with a unique name.
@@ -412,6 +419,11 @@ async def security_input_validation(ctx, node_input: str) -> str:
                 )
                 ctx.state[f"blocked_artifact_{artifact_name}"] = True
                 continue
+
+            # Artifact passed MIME + size checks — signal to the router that
+            # a valid image is attached so route_after_router can dispatch
+            # to vision_agent for image-bearing intents.
+            ctx.state["has_image"] = True
 
             # ── 5. EXIF stripping ─────────────────────────────────────────────
             # Surgically remove EXIF segments (APP1 for JPEG, eXIf/tEXt for PNG)

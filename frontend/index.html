@@ -84,15 +84,29 @@
             </div>
 
             <div id="ob-sheets-config-group" style="display:none;animation:fadeIn 0.2s ease-out;margin-bottom:1rem;">
-                <div class="ob-field" style="margin-bottom:0.75rem;">
-                    <label for="ob-sheet-id" class="ob-label"><i class="fa-solid fa-file-excel"></i> Google Spreadsheet URL or ID</label>
-                    <input type="text" id="ob-sheet-id" class="ob-num-input" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:0.375rem;padding:0.55rem;color:#f8fafc;font-size:0.85rem;margin-top:0.25rem;" placeholder="Paste Spreadsheet URL or ID here...">
-                </div>
-                <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);padding:0.75rem;border-radius:0.5rem;margin-top:0.5rem;">
-                    <p style="font-size:0.75rem;color:#f59e0b;margin:0;line-height:1.45;">
-                        ⚠️ <strong>Required:</strong> Please share your Google Spreadsheet (with edit access) with our service account email: <br>
-                        <code style="background:rgba(0,0,0,0.3);padding:0.15rem 0.35rem;border-radius:3px;font-size:0.7rem;user-select:all;word-break:break-all;display:block;margin-top:0.35rem;color:#fbbf24;">459552199677-compute@developer.gserviceaccount.com</code>
+                <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);padding:0.85rem;border-radius:0.5rem;margin-bottom:0.75rem;">
+                    <p style="font-size:0.78rem;color:#cbd5e1;margin:0 0 0.55rem;line-height:1.5;">
+                        <strong style="color:#60a5fa;">3 quick steps</strong> — takes about 2 minutes:
                     </p>
+                    <ol style="margin:0;padding-left:1.15rem;font-size:0.75rem;color:#cbd5e1;line-height:1.55;">
+                        <li>Enable the <a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">Google Sheets API</a> for your project.</li>
+                        <li><a href="https://support.google.com/docs/answer/9331169" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">Share your sheet</a> with the service account below (Editor access).</li>
+                        <li>Paste your sheet URL or ID and continue.</li>
+                    </ol>
+                    <div style="margin-top:0.7rem;padding:0.55rem;background:rgba(0,0,0,0.35);border-radius:0.35rem;display:flex;align-items:center;gap:0.5rem;">
+                        <code id="ob-sa-email" style="flex:1;font-size:0.7rem;color:#fbbf24;user-select:all;word-break:break-all;">459552199677-compute@developer.gserviceaccount.com</code>
+                        <button type="button" id="ob-sa-copy" style="background:#334155;border:1px solid #475569;border-radius:0.3rem;color:#e2e8f0;padding:0.3rem 0.55rem;font-size:0.7rem;font-weight:600;cursor:pointer;" aria-label="Copy service account email">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <p style="margin:0.6rem 0 0;font-size:0.68rem;color:#94a3b8;line-height:1.45;">
+                        Prefer a different account?
+                        <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">Manage service accounts</a>.
+                    </p>
+                </div>
+                <div class="ob-field" style="margin-bottom:0.25rem;">
+                    <label for="ob-sheet-id" class="ob-label"><i class="fa-solid fa-file-excel"></i> Google Spreadsheet URL or ID</label>
+                    <input type="text" id="ob-sheet-id" class="ob-num-input" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:0.375rem;padding:0.55rem;color:#f8fafc;font-size:0.85rem;margin-top:0.25rem;" placeholder="https://docs.google.com/spreadsheets/d/…">
                 </div>
             </div>
         </div>
@@ -192,8 +206,8 @@
                     </div>
                 </div>
 
-                <!-- Optional image capture block -->
-                <div id="ob-crop-photo-group" style="display:none;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
+                <!-- Optional image capture block (always visible in Phase 17) -->
+                <div id="ob-crop-photo-group" style="display:block;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
                         <span style="font-size:0.8rem;color:#60a5fa;font-weight:600;"><i class="fa-solid fa-camera"></i> Crop Photo Analysis</span>
                         <button id="ob-crop-photo-btn" class="ob-btn-ghost" style="padding:0.25rem 0.5rem;font-size:0.75rem;background:#1e293b;border:1px solid #334155;border-radius:0.25rem;color:#3b82f6;cursor:pointer;"><i class="fa-solid fa-upload"></i> Choose Photo</button>
@@ -207,6 +221,9 @@
                 </div>
 
                 <button id="ob-crop-details-save" class="ob-btn ob-btn-primary ob-btn-full" style="width:100%;">Save Details</button>
+                <button id="ob-crop-details-remove" style="display:none;width:100%;margin-top:0.5rem;background:transparent;border:1px solid #ef4444;color:#ef4444;padding:0.55rem;border-radius:0.375rem;font-size:0.8rem;font-weight:600;cursor:pointer;">
+                    <i class="fa-solid fa-trash"></i> Remove crop from parcel
+                </button>
             </div>
 
         </div>
@@ -319,9 +336,23 @@
             <section class="farm-section">
                 <div class="section-header">
                     <h2 class="section-title">Farm Parcels</h2>
-                    <span class="section-hint">Tap a cell to inspect</span>
+                    <span class="section-hint">Tap to inspect · Pencil to edit</span>
                 </div>
                 <div id="farm-grid-view" class="farm-grid-view" role="grid" aria-label="Farm parcels grid"></div>
+                <div class="farm-grid-actions" style="display:flex;gap:0.5rem;margin-top:0.75rem;justify-content:center;flex-wrap:wrap;">
+                    <button id="grid-add-row-btn" class="chat-icon-btn" style="padding:0.4rem 0.75rem;font-size:0.8rem;background:#1e293b;border:1px solid #334155;border-radius:0.375rem;color:#e2e8f0;cursor:pointer;">
+                        <i class="fa-solid fa-plus"></i> Row
+                    </button>
+                    <button id="grid-add-col-btn" class="chat-icon-btn" style="padding:0.4rem 0.75rem;font-size:0.8rem;background:#1e293b;border:1px solid #334155;border-radius:0.375rem;color:#e2e8f0;cursor:pointer;">
+                        <i class="fa-solid fa-plus"></i> Column
+                    </button>
+                    <button id="grid-remove-row-btn" class="chat-icon-btn" style="padding:0.4rem 0.75rem;font-size:0.8rem;background:#1e293b;border:1px solid #334155;border-radius:0.375rem;color:#e2e8f0;cursor:pointer;">
+                        <i class="fa-solid fa-minus"></i> Row
+                    </button>
+                    <button id="grid-remove-col-btn" class="chat-icon-btn" style="padding:0.4rem 0.75rem;font-size:0.8rem;background:#1e293b;border:1px solid #334155;border-radius:0.375rem;color:#e2e8f0;cursor:pointer;">
+                        <i class="fa-solid fa-minus"></i> Column
+                    </button>
+                </div>
             </section>
 
             <!-- Section 3: Crop Planner -->
@@ -357,15 +388,6 @@
 
         <!-- ══════ TAB 2: AI ASSISTANT ══════ -->
         <div id="tab-ai" class="tab-view ai-tab-view" role="tabpanel">
-
-            <!-- Context Bar -->
-            <div class="ai-context-bar">
-                <div id="ai-context-badge" class="ai-context-badge">
-                    <i class="fa-solid fa-seedling"></i>
-                    <span id="ai-context-text">General farm</span>
-                </div>
-                <span id="ai-context-hint" class="ai-context-hint">Select a parcel in Farm tab</span>
-            </div>
 
             <!-- Messages Area -->
             <div id="chat-messages" class="chat-messages">

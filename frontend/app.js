@@ -327,13 +327,27 @@ function initStep1() {
         btnSheets.style.background = '#10b981';
         btnSheets.style.borderColor = '#059669';
         btnSheets.style.color = '#ffffff';
-        
+
         btnLocal.classList.remove('active');
         btnLocal.style.background = '#1e293b';
         btnLocal.style.borderColor = '#334155';
         btnLocal.style.color = '#94a3b8';
-        
+
         sheetsGroup.style.display = 'block';
+    });
+
+    // Copy service account email to clipboard
+    document.getElementById('ob-sa-copy')?.addEventListener('click', async () => {
+        const btn = document.getElementById('ob-sa-copy');
+        const email = document.getElementById('ob-sa-email')?.textContent?.trim() || '';
+        try {
+            await navigator.clipboard.writeText(email);
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+            setTimeout(() => { btn.innerHTML = original; }, 1500);
+        } catch (e) {
+            /* clipboard blocked — user can still select the code element manually */
+        }
     });
 
     function chk() {
@@ -478,6 +492,9 @@ function closeObModal() {
     document.getElementById('ob-crop-modal').style.display = 'none';
     document.body.style.overflow = '';
     _selectedCell = null;
+    _editingProfileParcel = false;
+    const rmBtn = document.getElementById('ob-crop-details-remove');
+    if (rmBtn) rmBtn.style.display = 'none';
 }
 
 function initStep2() {
@@ -505,15 +522,10 @@ function initStep2() {
         document.getElementById('ob-crop-screen-details').style.display = 'none';
     });
 
-    const cycleSelect = document.getElementById('ob-crop-cycle');
+    // Phase 17: photo capture is offered for every parcel during onboarding,
+    // regardless of cycle selection. Kept as an always-visible optional field.
     const photoGroup = document.getElementById('ob-crop-photo-group');
-    cycleSelect.addEventListener('change', () => {
-        if (cycleSelect.value === 'unknown') {
-            photoGroup.style.display = 'block';
-        } else {
-            photoGroup.style.display = 'none';
-        }
-    });
+    if (photoGroup) photoGroup.style.display = 'block';
 
     const photoBtn = document.getElementById('ob-crop-photo-btn');
     const photoInput = document.getElementById('ob-crop-photo-input');
@@ -616,15 +628,52 @@ function initStep2() {
     document.getElementById('ob-crop-details-save').addEventListener('click', () => {
         const name = nameInput.value.trim();
         if (!name) return;
-        
-        _gridState[_selectedCell] = {
-            crop: currentValidatedName.toLowerCase() || name.toLowerCase(),
+
+        const record = {
+            crop: (currentValidatedName || name).toLowerCase(),
             cycle: cycleSelect.value,
-            photo: pendingCropPhoto ? pendingCropPhoto.dataUrl : null
+            photo: pendingCropPhoto ? pendingCropPhoto.dataUrl : null,
         };
-        
+
+        if (_editingProfileParcel) {
+            // Post-onboarding edit — mutate APP.profile in place and persist.
+            APP.profile.grid = APP.profile.grid || {};
+            APP.profile.grid[_selectedCell] = record;
+            APP.profile.parcels = APP.profile.parcels || [];
+            const pIdx = APP.profile.parcels.findIndex(p => p.id === _selectedCell);
+            const parcelRec = {
+                id: _selectedCell,
+                crop: record.crop,
+                cycle: record.cycle,
+                photo: record.photo,
+                area_ha: pIdx >= 0 ? (APP.profile.parcels[pIdx].area_ha || 1.0) : 1.0,
+                status: pIdx >= 0 ? (APP.profile.parcels[pIdx].status || 'Healthy') : 'Healthy',
+            };
+            if (pIdx >= 0) APP.profile.parcels[pIdx] = parcelRec;
+            else APP.profile.parcels.push(parcelRec);
+            saveProfile(APP.profile);
+            closeObModal();
+            renderFarmGrid();
+            persistProfileUpdate();
+        } else {
+            // Onboarding flow — original behavior.
+            _gridState[_selectedCell] = record;
+            closeObModal();
+            renderObGrid();
+        }
+    });
+
+    // Remove-parcel action (visible only in edit mode).
+    document.getElementById('ob-crop-details-remove')?.addEventListener('click', () => {
+        if (!_editingProfileParcel || !_selectedCell) return;
+        const id = _selectedCell;
+        APP.profile.grid = APP.profile.grid || {};
+        APP.profile.grid[id] = null;
+        APP.profile.parcels = (APP.profile.parcels || []).filter(p => p.id !== id);
+        saveProfile(APP.profile);
         closeObModal();
-        renderObGrid();
+        renderFarmGrid();
+        persistProfileUpdate();
     });
 
     document.getElementById('ob-start-btn').addEventListener('click', finishOnboarding);
@@ -656,10 +705,71 @@ async function finishOnboarding() {
     launchApp();
 }
 
+// Phase 17: build a state envelope that seeds the workflow session with the
+// user's real farm profile. Sent alongside every /run POST so the backend
+// never falls back to the demo mock DB — which was the root cause of
+// hallucinated parcels and mismatched market prices.
+function buildStateDelta(profile) {
+    if (!profile) return {};
+    const coords = (typeof coordsFor === 'function') ? coordsFor(profile.canton) : { lat:-0.2687, lng:-79.4326 };
+    const parcels = (profile.parcels || []).map(p => ({
+        id: p.id,
+        crop: (p.crop || '').toString(),
+        cycle: p.cycle || 'vegetative',
+        area_ha: p.area_ha != null ? p.area_ha : 1.0,
+        status: p.status || 'Healthy',
+        photo_data_url: p.photo || null,
+    }));
+    const crops = [...new Set(parcels.map(p => p.crop).filter(Boolean))];
+    const country = profile.country_label || profile.country || 'Ecuador';
+    return {
+        sheet_id: profile.sheet_id || '',
+        latitude: coords.lat,
+        longitude: coords.lng,
+        canton: (profile.canton || 'el_carmen').toString().toLowerCase().replace(/\s+/g,'_'),
+        province: profile.province || 'Manabí',
+        country,
+        crops,
+        farm_context: {
+            profile: {
+                country,
+                province: profile.province || 'Manabí',
+                canton: profile.canton || 'El Carmen',
+                latitude: coords.lat,
+                longitude: coords.lng,
+                farmer_name: profile.farmer_name || 'Farmer',
+                farm_name: profile.farm_name || 'Farm',
+                total_hectares: parcels.reduce((s,p) => s + (p.area_ha || 1.0), 0),
+            },
+            farm_grid: {
+                rows: profile.rows || 2,
+                cols: profile.cols || 3,
+                parcels,
+            },
+            crop_plan: profile.crop_plan || [],
+            indicators: profile.indicators || [],
+        },
+    };
+}
+
 async function persistFarm(profile) {
-    const body = JSON.stringify({ user_id:APP.userId, session_id:APP.sessionId,
-        new_message:{ parts:[{ text:`Save my farm profile: ${JSON.stringify({ sheet_id:profile.sheet_id, rows:profile.rows, cols:profile.cols, parcels:profile.parcels, location:{ canton:profile.canton, province:profile.province, country:profile.country_label } })}` }] } });
-    await fetch('/run',{ method:'POST', headers:{'Content-Type':'application/json'}, body, signal:AbortSignal.timeout(7000) });
+    const body = JSON.stringify({
+        user_id: APP.userId,
+        session_id: APP.sessionId,
+        state_delta: buildStateDelta(profile),
+        new_message: {
+            parts: [{
+                text: `Save my farm profile: ${JSON.stringify({
+                    sheet_id: profile.sheet_id,
+                    rows: profile.rows,
+                    cols: profile.cols,
+                    parcels: profile.parcels,
+                    location: { canton: profile.canton, province: profile.province, country: profile.country_label },
+                })}`,
+            }],
+        },
+    });
+    await fetch('/run', { method:'POST', headers:{'Content-Type':'application/json'}, body, signal:AbortSignal.timeout(15000) });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -734,6 +844,50 @@ function launchApp() {
 
     // Deselect handler
     document.getElementById('btn-deselect')?.addEventListener('click', deselectParcel);
+
+    // Phase 17 — grid dimension controls
+    document.getElementById('grid-add-row-btn')?.addEventListener('click', () => {
+        APP.profile.rows = Math.min(10, (APP.profile.rows || 2) + 1);
+        saveProfile(APP.profile);
+        renderFarmGrid();
+        persistProfileUpdate();
+    });
+    document.getElementById('grid-add-col-btn')?.addEventListener('click', () => {
+        APP.profile.cols = Math.min(10, (APP.profile.cols || 3) + 1);
+        saveProfile(APP.profile);
+        renderFarmGrid();
+        persistProfileUpdate();
+    });
+    document.getElementById('grid-remove-row-btn')?.addEventListener('click', () => {
+        if ((APP.profile.rows || 2) <= 1) return;
+        const newRows = APP.profile.rows - 1;
+        // Drop parcels from the removed row so they don't linger in state.
+        const removedRow = String.fromCharCode(65 + newRows);
+        APP.profile.grid = APP.profile.grid || {};
+        Object.keys(APP.profile.grid).forEach(k => {
+            if (k.startsWith(removedRow)) delete APP.profile.grid[k];
+        });
+        APP.profile.parcels = (APP.profile.parcels || []).filter(p => !p.id.startsWith(removedRow));
+        APP.profile.rows = newRows;
+        saveProfile(APP.profile);
+        renderFarmGrid();
+        persistProfileUpdate();
+    });
+    document.getElementById('grid-remove-col-btn')?.addEventListener('click', () => {
+        if ((APP.profile.cols || 3) <= 1) return;
+        const newCols = APP.profile.cols - 1;
+        const removedIdx = newCols + 1;
+        APP.profile.grid = APP.profile.grid || {};
+        Object.keys(APP.profile.grid).forEach(k => {
+            const col = parseInt(k.slice(1), 10);
+            if (col === removedIdx) delete APP.profile.grid[k];
+        });
+        APP.profile.parcels = (APP.profile.parcels || []).filter(p => parseInt(p.id.slice(1), 10) !== removedIdx);
+        APP.profile.cols = newCols;
+        saveProfile(APP.profile);
+        renderFarmGrid();
+        persistProfileUpdate();
+    });
 
     // Reset button
     document.getElementById('btn-reset-ob')?.addEventListener('click',()=>{
@@ -890,11 +1044,13 @@ function renderFarmGrid() {
     for(let r=0;r<rows;r++) {
         for(let c=0;c<cols;c++) {
             const id=cellId(r,c);
-            const cropId=grid[id]||null;
+            const cell=grid[id]||null;
+            const cropId=(typeof cell==='object'&&cell)?cell.crop:cell;
             const crop=cropId?cropOf(cropId):null;
             const el=document.createElement('div');
             el.className='farm-parcel'+(crop?' assigned':'');
             el.dataset.parcel=id;
+            el.style.position='relative';
             el.setAttribute('role','gridcell');
             el.setAttribute('aria-label',`Parcel ${id}${crop?': '+crop.label:''}`);
             if(crop&&crop.bg) {
@@ -906,9 +1062,109 @@ function renderFarmGrid() {
             } else {
                 el.innerHTML=`<span class="fp-id">${id}</span><span class="fp-empty"><i class="fa-solid fa-plus"></i></span>`;
             }
+            // Phase 17 — pencil edit affordance opens ob-crop-modal in edit mode.
+            const pencil=document.createElement('button');
+            pencil.className='parcel-edit-btn';
+            pencil.setAttribute('aria-label',`Edit parcel ${id}`);
+            pencil.style.cssText='position:absolute;top:4px;right:4px;background:rgba(15,23,42,0.75);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#e2e8f0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.7rem;padding:0;';
+            pencil.innerHTML='<i class="fa-solid fa-pen"></i>';
+            pencil.addEventListener('click',(e)=>{ e.stopPropagation(); openEditParcelModal(id); });
+            el.appendChild(pencil);
+
             el.addEventListener('click',()=>selectParcel(id, cropId));
             container.appendChild(el);
         }
+    }
+}
+
+// Phase 17 — edit-parcel entrypoint. Reuses the onboarding modal in edit mode.
+function openEditParcelModal(id) {
+    _editingProfileParcel = true;
+    _selectedCell = id;
+    const cell = (APP.profile.grid||{})[id] || null;
+    const cur = (typeof cell === 'object' && cell) ? cell : (cell ? { crop:cell, cycle:'vegetative', photo:null } : null);
+
+    document.getElementById('ob-crop-cell-label').textContent = id;
+    pendingCropPhoto = cur?.photo ? { dataUrl: cur.photo, mimeType: 'image/jpeg' } : null;
+
+    const photoWrap = document.getElementById('ob-crop-photo-preview-wrap');
+    const photoImg = document.getElementById('ob-crop-photo-preview');
+    const photoName = document.getElementById('ob-crop-photo-filename');
+    if (cur?.photo && photoWrap && photoImg && photoName) {
+        photoImg.src = cur.photo;
+        photoName.textContent = 'existing photo';
+        photoWrap.style.display = 'flex';
+    } else if (photoWrap) {
+        photoWrap.style.display = 'none';
+    }
+
+    // Populate crop options and open selection screen
+    const opts = document.getElementById('ob-crop-options');
+    opts.innerHTML = '';
+    CROPS.forEach(cr => {
+        const b = document.createElement('button');
+        const isSelected = cur && cur.crop === cr.id;
+        b.className = 'ob-crop-option' + (isSelected ? ' selected' : '');
+        b.innerHTML = `<span style="font-size:1.6rem">${cr.icon}</span>${cr.label}`;
+        b.addEventListener('click', () => {
+            if (cr.id === 'empty') {
+                APP.profile.grid[id] = null;
+                APP.profile.parcels = (APP.profile.parcels||[]).filter(p => p.id !== id);
+                closeObModal();
+                saveProfile(APP.profile);
+                renderFarmGrid();
+                persistProfileUpdate();
+            } else {
+                document.getElementById('ob-crop-screen-selection').style.display = 'none';
+                document.getElementById('ob-crop-screen-details').style.display = 'block';
+                const nameInput = document.getElementById('ob-custom-crop-name');
+                nameInput.value = cr.id === 'other' ? '' : cr.label;
+                const cycleSelect = document.getElementById('ob-crop-cycle');
+                cycleSelect.value = cur?.cycle || 'vegetative';
+                nameInput.dispatchEvent(new Event('input'));
+                cycleSelect.dispatchEvent(new Event('change'));
+            }
+        });
+        opts.appendChild(b);
+    });
+
+    document.getElementById('ob-crop-screen-selection').style.display = 'block';
+    document.getElementById('ob-crop-screen-details').style.display = 'none';
+    // Show the "Remove" secondary action only in edit mode.
+    const rmBtn = document.getElementById('ob-crop-details-remove');
+    if (rmBtn) rmBtn.style.display = 'block';
+
+    document.getElementById('ob-crop-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+let _editingProfileParcel = false;
+
+// Persist an updated farm profile to the backend — used by all post-onboarding
+// grid mutations (edit parcel, add/remove row/col, remove parcel).
+async function persistProfileUpdate() {
+    try {
+        const body = JSON.stringify({
+            user_id: APP.userId,
+            session_id: APP.sessionId,
+            state_delta: buildStateDelta(APP.profile),
+            new_message: {
+                parts: [{ text: `Save my farm profile: ${JSON.stringify({
+                    sheet_id: APP.profile.sheet_id,
+                    rows: APP.profile.rows,
+                    cols: APP.profile.cols,
+                    parcels: APP.profile.parcels,
+                    location: {
+                        canton: APP.profile.canton,
+                        province: APP.profile.province,
+                        country: APP.profile.country_label,
+                    },
+                })}` }],
+            },
+        });
+        await fetch('/run', { method:'POST', headers:{'Content-Type':'application/json'}, body, signal: AbortSignal.timeout(15000) });
+    } catch (e) {
+        console.warn('Profile update persist failed:', e.message);
     }
 }
 
@@ -1080,20 +1336,9 @@ function renderEventsList() {
 // ─────────────────────────────────────────────────────────────
 // AI ASSISTANT — Context bar + Suggestions
 // -------------------------------------------------------------
-function renderContextBar() {
-    const badge=document.getElementById('ai-context-badge');
-    const hint=document.getElementById('ai-context-hint');
-    const text=document.getElementById('ai-context-text');
-
-    if(APP.selectedParcel) {
-        const cr=cropOf(APP.selectedParcel.crop);
-        text.textContent=`${APP.selectedParcel.id}${cr?' '+cr.icon+' '+cr.label:''}`;
-        hint.textContent='Tap Deselect in Farm tab to remove filter';
-    } else {
-        text.textContent='General farm';
-        hint.textContent='Select a parcel in Farm tab for specific advice';
-    }
-}
+// renderContextBar removed in Phase 17 — the ai-context-bar UI was removed
+// because the chat is no longer scoped by the selected parcel.
+function renderContextBar() { /* noop */ }
 
 function renderSuggestions() {
     const container=document.getElementById('ai-suggestions');
@@ -1230,13 +1475,10 @@ async function sendMessage() {
 
     const typing=addTypingIndicator();
 
-    // Build context string
-    let contextParts=[text];
-    if(APP.selectedParcel) {
-        const cr=cropOf(APP.selectedParcel.crop);
-        contextParts.push(`[Context: parcel ${APP.selectedParcel.id}, crop: ${cr?.label||APP.selectedParcel.crop}]`);
-    }
-    const fullMessage=contextParts.join(' ');
+    // Phase 17: no message-level parcel filter — the agent answers whatever
+    // the farmer typed. The dashboard grid still tracks APP.selectedParcel
+    // for its own UI (indicators view), but the chat is unfiltered.
+    const fullMessage=text;
 
     try {
         const response=await agentRun(fullMessage, img);
@@ -1385,9 +1627,10 @@ async function agentRun(text, pendingImage = null) {
     }
     const res=await fetch('/run',{
         method:'POST', headers:{'Content-Type':'application/json'},
-        signal:AbortSignal.timeout(30000),
+        signal:AbortSignal.timeout(45000),
         body:JSON.stringify({
             user_id:APP.userId, session_id:APP.sessionId,
+            state_delta: buildStateDelta(APP.profile),
             new_message:{ parts },
         }),
     });

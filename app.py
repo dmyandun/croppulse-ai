@@ -37,7 +37,7 @@ app = get_fast_api_app(
 # Unregister default ADK /run route to allow our custom legacy_run route override
 app.router.routes = [r for r in app.router.routes if r.path != "/run"]
 
-BUILD_ID = "build_20260705_1600"
+BUILD_ID = "build_20260705_1700"
 
 
 @app.get("/version")
@@ -78,15 +78,25 @@ async def collect_feedback():
 @app.post("/run")
 async def legacy_run(request: Request):
     try:
+        import base64
+
         body = await request.json()
         user_id = body.get("user_id", "default_user")
         session_id = body.get("session_id", "default_session")
         new_message_raw = body.get("new_message", {})
+        # Optional client-supplied state envelope. Used to seed farm_context,
+        # sheet_id, crops, and coordinates so the workflow does not fall back
+        # to the demo mock DB when Cloud Run has no Sheets credentials.
+        state_delta = body.get("state_delta") or {}
 
         text = ""
-        parts = new_message_raw.get("parts", [])
-        if parts:
-            text = parts[0].get("text", "")
+        image_inline_parts = []
+        for p in new_message_raw.get("parts", []) or []:
+            if not text and isinstance(p.get("text"), str):
+                text = p.get("text", "")
+            inline = p.get("inline_data") or p.get("inlineData")
+            if isinstance(inline, dict) and inline.get("data"):
+                image_inline_parts.append(inline)
 
         try:
             session = await session_service.get_session(
@@ -100,7 +110,29 @@ async def legacy_run(request: Request):
                 app_name="croppulse-ai", user_id=user_id, session_id=session_id
             )
 
-        message = types.Content(role="user", parts=[types.Part.from_text(text=text)])
+        if isinstance(state_delta, dict) and state_delta:
+            try:
+                session.state.update(state_delta)
+            except Exception:
+                logging_mod = __import__("logging")
+                logging_mod.getLogger(__name__).warning(
+                    "legacy_run: failed to apply state_delta (%d keys)",
+                    len(state_delta),
+                )
+
+        message_parts = [types.Part.from_text(text=text)]
+        for inline in image_inline_parts:
+            try:
+                raw = base64.b64decode(inline["data"])
+                mime = inline.get("mime_type") or inline.get("mimeType") or "image/jpeg"
+                message_parts.append(types.Part.from_bytes(data=raw, mime_type=mime))
+            except Exception:
+                logging_mod = __import__("logging")
+                logging_mod.getLogger(__name__).warning(
+                    "legacy_run: failed to decode inline image part"
+                )
+
+        message = types.Content(role="user", parts=message_parts)
 
         events = []
         async for event in runner.run_async(

@@ -52,6 +52,62 @@ async def sheets_read_node(ctx: Context, node_input: str) -> str:
     message_text = str(node_input).strip()
     sheet_id = ctx.state.get("sheet_id", _SHEET_ID)
 
+    # ── Prefer client-seeded farm_context (Phase 17) ──────────────────────────
+    # `app.py:legacy_run` copies an optional `state_delta` from the request
+    # into `session.state` before the workflow runs. When the frontend attaches
+    # the full farm profile envelope on every /run call, the Cloud Run instance
+    # no longer depends on Sheets credentials or the ephemeral crop_logs.json
+    # mock — and the demo-farm fallback that caused parcels/prices to look
+    # hallucinated is skipped entirely.
+    seeded = ctx.state.get("farm_context")
+    seeded_ok = False
+    seeded_str = ""
+    if isinstance(seeded, dict) and ("farm_grid" in seeded or "profile" in seeded):
+        seeded_str = json.dumps(seeded, indent=2)
+        seeded_ok = True
+    elif isinstance(seeded, str) and seeded and (
+        "farm_grid" in seeded or '"profile"' in seeded
+    ):
+        seeded_str = seeded
+        seeded_ok = True
+
+    if seeded_ok and not message_text.startswith("Save my farm profile:"):
+        ctx.state["farm_context"] = seeded_str
+        try:
+            parsed = json.loads(seeded_str)
+            profile = parsed.get("profile", {}) or {}
+            grid = parsed.get("farm_grid", {}) or {}
+            parcels = grid.get("parcels", []) or []
+            all_crops = [p["crop"] for p in parcels if p.get("crop")]
+            ctx.state.setdefault(
+                "latitude", float(profile.get("latitude", -0.2687))
+            )
+            ctx.state.setdefault(
+                "longitude", float(profile.get("longitude", -79.4326))
+            )
+            ctx.state.setdefault(
+                "canton",
+                str(profile.get("canton", "el_carmen")).lower().replace(" ", "_"),
+            )
+            ctx.state.setdefault("province", profile.get("province", "Manabí"))
+            ctx.state.setdefault("country", profile.get("country", "Ecuador"))
+            if all_crops:
+                ctx.state["crops"] = all_crops
+            unhealthy = [
+                p["crop"]
+                for p in parcels
+                if p.get("status", "Healthy").lower() not in ("healthy", "")
+            ]
+            ctx.state.setdefault(
+                "selected_crop",
+                unhealthy[0]
+                if unhealthy
+                else (all_crops[0] if all_crops else "cacao"),
+            )
+        except Exception:
+            pass
+        return seeded_str
+
     # ── Handle Profile and Grid Saving from Onboarding ────────────────────────
     if message_text.startswith("Save my farm profile:"):
         try:
