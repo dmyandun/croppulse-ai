@@ -7,6 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from google.adk.agents.run_config import RunConfig, StreamingMode
+from google.adk.artifacts import InMemoryArtifactService
 from google.adk.cli.fast_api import get_fast_api_app
 from google.adk.cli.utils.service_factory import create_session_service_from_options
 from google.adk.events import Event, EventActions
@@ -21,10 +22,16 @@ load_dotenv()
 # Set agent directory as current directory
 AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Initialize session service and runner using the same config
+# Initialize session service, artifact service, and runner using the same config.
+# Without an artifact_service, ctx.list_artifacts() raises "Artifact service is
+# not initialized" and the vision agent is never reached — Phase 18 fix.
 session_service = create_session_service_from_options(base_dir=AGENT_DIR)
+artifact_service = InMemoryArtifactService()
 runner = Runner(
-    agent=root_workflow, session_service=session_service, app_name="croppulse-ai"
+    agent=root_workflow,
+    session_service=session_service,
+    artifact_service=artifact_service,
+    app_name="croppulse-ai",
 )
 
 app = get_fast_api_app(
@@ -38,7 +45,7 @@ app = get_fast_api_app(
 # Unregister default ADK /run route to allow our custom legacy_run route override
 app.router.routes = [r for r in app.router.routes if r.path != "/run"]
 
-BUILD_ID = "build_20260705_1900"
+BUILD_ID = "build_20260705_2000"
 
 
 @app.get("/version")
@@ -136,19 +143,39 @@ async def legacy_run(request: Request):
                 except Exception:
                     pass
 
-        message_parts = [types.Part.from_text(text=text)]
-        for inline in image_inline_parts:
+        # Persist uploaded images as ADK artifacts so nodes downstream can
+        # discover them via ctx.list_artifacts() / ctx.load_artifact(). We
+        # deliberately keep the workflow Content text-only — the vision agent
+        # loads its image from the artifact channel, not from message parts,
+        # and function nodes like security_input_validation would otherwise
+        # trip ADK's "non-text parts dropped during auto-conversion" warning.
+        for idx, inline in enumerate(image_inline_parts):
             try:
                 raw = base64.b64decode(inline["data"])
-                mime = inline.get("mime_type") or inline.get("mimeType") or "image/jpeg"
-                message_parts.append(types.Part.from_bytes(data=raw, mime_type=mime))
+                mime = (
+                    inline.get("mime_type")
+                    or inline.get("mimeType")
+                    or "image/jpeg"
+                )
+                ext = mime.split("/")[-1] if "/" in mime else "bin"
+                filename = f"user_upload_{idx}.{ext}"
+                part = types.Part.from_bytes(data=raw, mime_type=mime)
+                await artifact_service.save_artifact(
+                    app_name="croppulse-ai",
+                    user_id=user_id,
+                    session_id=session_id,
+                    filename=filename,
+                    artifact=part,
+                )
             except Exception:
                 logging_mod = __import__("logging")
                 logging_mod.getLogger(__name__).warning(
-                    "legacy_run: failed to decode inline image part"
+                    "legacy_run: failed to save inline image as artifact"
                 )
 
-        message = types.Content(role="user", parts=message_parts)
+        message = types.Content(
+            role="user", parts=[types.Part.from_text(text=text)]
+        )
 
         events = []
         async for event in runner.run_async(

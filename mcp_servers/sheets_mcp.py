@@ -36,13 +36,21 @@ _SHEETS_CLIENT = None  # cached gspread client
 
 
 def _get_sheets_client():
-    """Return an authenticated gspread client, or None on failure."""
+    """Return an authenticated gspread client, or None on failure.
+
+    Auth priority (Phase 18):
+      1. GOOGLE_SERVICE_ACCOUNT_JSON — path to a service-account JSON file (local dev).
+      2. GOOGLE_SHEETS_CREDENTIALS_JSON — raw JSON string (secret-manager style).
+      3. Application Default Credentials — used automatically on Cloud Run / GCE
+         via the metadata server so the compute SA the container runs as
+         (the same one the user shared their sheet with) is picked up without
+         needing any env var configuration.
+    """
     global _SHEETS_CLIENT
     if _SHEETS_CLIENT is not None:
         return _SHEETS_CLIENT
     try:
         import gspread
-        from google.oauth2.service_account import Credentials
 
         SCOPES = [
             "https://www.googleapis.com/auth/spreadsheets",
@@ -52,13 +60,24 @@ def _get_sheets_client():
         cred_path = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
         cred_json = os.environ.get("GOOGLE_SHEETS_CREDENTIALS_JSON")
 
+        creds = None
         if cred_path and os.path.exists(cred_path):
+            from google.oauth2.service_account import Credentials
             creds = Credentials.from_service_account_file(cred_path, scopes=SCOPES)
         elif cred_json:
+            from google.oauth2.service_account import Credentials
             info = json.loads(cred_json)
             creds = Credentials.from_service_account_info(info, scopes=SCOPES)
         else:
-            return None  # No credentials → fallback mode
+            try:
+                import google.auth
+                adc_creds, _ = google.auth.default(scopes=SCOPES)
+                creds = adc_creds
+            except Exception:
+                return None
+
+        if creds is None:
+            return None
 
         _SHEETS_CLIENT = gspread.authorize(creds)
         return _SHEETS_CLIENT

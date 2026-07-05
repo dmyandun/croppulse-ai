@@ -704,6 +704,54 @@ async function finishOnboarding() {
     try { await persistFarm(APP.profile); } catch (e) { console.warn('Backend save skipped:', e.message); }
     document.getElementById('ob-saving-msg').style.display = 'none';
     launchApp();
+    // Phase 18: kick off vision analysis for any parcel photo captured during
+    // onboarding. Runs in the background — the user lands on the dashboard
+    // immediately and results appear as chat messages when the AI tab opens.
+    analyzeOnboardingPhotos().catch(err => console.warn('Photo analysis skipped:', err));
+}
+
+async function analyzeOnboardingPhotos() {
+    const parcelsWithPhotos = (APP.profile?.parcels || []).filter(p => p && p.photo);
+    if (!parcelsWithPhotos.length) return;
+    APP.chatSeed = APP.chatSeed || [];
+    for (const p of parcelsWithPhotos) {
+        try {
+            const mimeMatch = /^data:([^;]+);base64,/.exec(p.photo);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const data = p.photo.split(',')[1];
+            if (!data) continue;
+            const prompt = `Identify the crop and its growth stage from the attached photo. The farmer declared this parcel (${p.id}) as ${p.crop || 'unknown'} at ${p.cycle || 'unknown'} stage. Confirm the identification or suggest a correction, in 1-3 sentences.`;
+            const res = await fetch('/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: AbortSignal.timeout(60000),
+                body: JSON.stringify({
+                    user_id: APP.userId,
+                    session_id: APP.sessionId,
+                    state_delta: buildStateDelta(APP.profile),
+                    new_message: {
+                        parts: [
+                            { text: prompt },
+                            { inline_data: { mime_type: mime, data } },
+                        ],
+                    },
+                }),
+            });
+            if (!res.ok) continue;
+            const events = await res.json();
+            const text = extractFinalOutput(events);
+            APP.chatSeed.push({
+                role: 'agent',
+                text: `📸 Photo analysis for parcel ${p.id}:\n\n${text}`,
+            });
+            // If user is currently on the AI tab, surface the result right away.
+            if (document.getElementById('tab-ai')?.classList.contains('active')) {
+                addMessage('agent', `📸 Photo analysis for parcel ${p.id}:\n\n${text}`);
+            }
+        } catch (e) {
+            console.warn(`Photo analysis for ${p.id} failed:`, e.message);
+        }
+    }
 }
 
 // Phase 17: build a state envelope that seeds the workflow session with the
@@ -907,6 +955,12 @@ function switchTab(tabId) {
     });
     document.querySelectorAll('.tab-view').forEach(v=>v.classList.remove('active'));
     document.getElementById(`tab-${tabId}`)?.classList.add('active');
+    // Phase 18: drain any pending photo-analysis results into the chat when
+    // the user first opens the AI tab.
+    if (tabId === 'ai' && APP.chatSeed && APP.chatSeed.length) {
+        APP.chatSeed.forEach(m => { try { addMessage(m.role || 'agent', m.text || ''); } catch {} });
+        APP.chatSeed = [];
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
