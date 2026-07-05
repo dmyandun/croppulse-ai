@@ -1,3 +1,12 @@
+"""
+Market Node - CropPulse AI
+Calls the Market MCP server to fetch current commodity spot prices
+and price trend history for all crops on the farm.
+"""
+
+from __future__ import annotations
+
+import json
 import os
 
 from google.adk import Context
@@ -11,14 +20,41 @@ MARKET_MCP_PATH = os.path.join(
 )
 
 
+async def _call_market_tool(
+    session: ClientSession,
+    tool_name: str,
+    arguments: dict,
+) -> dict:
+    """Call a market MCP tool and return parsed JSON result."""
+    res = await session.call_tool(tool_name, arguments=arguments)
+    raw = res.content[0].text if res.content else "{}"
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {"raw": raw}
+
+
 async def market_node(ctx: Context, node_input: str) -> str:
-    """Fetch commodity crop market prices via market MCP server."""
-    # Save vision output if it flows from the vision agent
-    if node_input:
+    """Fetch commodity market data via the Market MCP server.
+
+    For each crop on the farm, retrieves:
+    - Current spot price
+    - 30-day price trend and percentage change
+    """
+    # Preserve vision output when flowing from the vision agent
+    if node_input and "vision_output" not in ctx.state:
         ctx.state["vision_output"] = node_input
 
-    # Retrieve selected crop from shared state
-    crop = ctx.state.get("selected_crop", "cacao")
+    # Gather all crops on the farm (from Sheets context)
+    crops: list[str] = ctx.state.get("crops", [ctx.state.get("selected_crop", "cacao")])
+    # De-duplicate while preserving order
+    seen: set[str] = set()
+    unique_crops: list[str] = []
+    for c in crops:
+        cl = c.lower()
+        if cl not in seen:
+            seen.add(cl)
+            unique_crops.append(cl)
 
     params = StdioServerParameters(command="python", args=[MARKET_MCP_PATH])
 
@@ -26,13 +62,59 @@ async def market_node(ctx: Context, node_input: str) -> str:
         async with stdio_client(params) as (read_stream, write_stream):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                res = await session.call_tool(
-                    "get_crop_market_price", arguments={"crop_name": str(crop)}
+
+                market_results: list[dict] = []
+                for crop in unique_crops:
+                    # Spot price
+                    price_data = await _call_market_tool(
+                        session,
+                        "get_current_price",
+                        {"commodity": crop},
+                    )
+                    if "error" in price_data:
+                        # Skip unsupported commodities silently
+                        continue
+
+                    # 30-day trend
+                    trend_data = await _call_market_tool(
+                        session,
+                        "get_price_trend",
+                        {"commodity": crop, "days": 30},
+                    )
+
+                    market_results.append(
+                        {
+                            "commodity": price_data.get("commodity", crop),
+                            "description": price_data.get("description", ""),
+                            "current_price_usd": price_data.get("current_price_usd"),
+                            "unit": price_data.get("unit"),
+                            "daily_change_pct": price_data.get("daily_change_pct"),
+                            "trend_direction": price_data.get("trend_direction"),
+                            "trend_30d": {
+                                "overall_change_pct": trend_data.get(
+                                    "overall_change_pct"
+                                ),
+                                "direction": trend_data.get("trend_direction"),
+                                "min_price_usd": trend_data.get("min_price_usd"),
+                                "max_price_usd": trend_data.get("max_price_usd"),
+                                "avg_price_usd": trend_data.get("avg_price_usd"),
+                            },
+                        }
+                    )
+
+                market_data = json.dumps(
+                    {
+                        "commodities": market_results,
+                        "crops_analyzed": len(market_results),
+                    },
+                    indent=2,
                 )
-                market_data = res.content[0].text
                 ctx.state["market_output"] = market_data
                 return market_data
+
     except Exception as e:
-        error_msg = f"Failed to retrieve market data: {e!s}"
+        error_msg = json.dumps(
+            {"error": f"Market MCP call failed: {e!s}", "crops": unique_crops}
+        )
         ctx.state["market_output"] = error_msg
         return error_msg

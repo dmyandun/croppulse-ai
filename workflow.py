@@ -61,29 +61,42 @@ def route_after_router(ctx: Context, node_input: str) -> Event:
 
 def compile_advisory_input(ctx: Context, node_input: str) -> str:
     """Consolidate Vision, Weather, Markets, and Sheets inputs into a single prompt for Advisory."""
-    # If the input was weather or market data, save it to state
+    # Stash incoming data into state keyed by signal type
     if node_input:
-        if "weather_code" in node_input or "temperature" in node_input:
-            ctx.state["weather_output"] = node_input
-        elif "commodity" in node_input or "price" in node_input:
-            ctx.state["market_output"] = node_input
+        try:
+            parsed = json.loads(node_input)
+            # Detect weather payload by presence of 'current_weather' key
+            if isinstance(parsed, dict) and "current_weather" in parsed:
+                ctx.state["weather_output"] = node_input
+            # Detect market payload by presence of 'commodities' key
+            elif isinstance(parsed, dict) and "commodities" in parsed:
+                ctx.state["market_output"] = node_input
+        except Exception:
+            # Plain text (e.g. vision agent output)
+            if "vision_output" not in ctx.state:
+                ctx.state["vision_output"] = node_input
 
     vision_out = ctx.state.get(
-        "vision_output", "No image analyzed (Not required/No photo)."
+        "vision_output", "No image analyzed (not required / no photo submitted)."
     )
-    weather_out = ctx.state.get("weather_output", "No location weather data retrieved.")
-    market_out = ctx.state.get(
-        "market_output", "No commodity market price data retrieved."
-    )
+    weather_out = ctx.state.get("weather_output", "No weather data retrieved.")
+    market_out = ctx.state.get("market_output", "No market price data retrieved.")
     farm_context = ctx.state.get("farm_context", "No farm context available.")
 
+    # Pretty-print JSON signals if they are valid JSON blobs
+    def _fmt(raw: str) -> str:
+        try:
+            return json.dumps(json.loads(raw), indent=2)
+        except Exception:
+            return raw
+
     prompt = (
-        f"Input Signals for Fusion:\n\n"
+        "Input Signals for Cross-Signal Intelligence Fusion:\n\n"
         f"1. VISION ASSESSMENT:\n{vision_out}\n\n"
-        f"2. WEATHER FORECAST:\n{weather_out}\n\n"
-        f"3. MARKET PRICE:\n{market_out}\n\n"
-        f"4. FARM CONTEXT:\n{farm_context}\n\n"
-        f"Generate the comprehensive advisory recommendation report."
+        f"2. WEATHER DATA (current + 7-day forecast + historical rain):\n{_fmt(weather_out)}\n\n"
+        f"3. MARKET PRICES (spot + 30-day trend for all farm crops):\n{_fmt(market_out)}\n\n"
+        f"4. FARM CONTEXT (profile, grid, crop plan, indicators):\n{_fmt(farm_context)}\n\n"
+        "Generate the comprehensive cross-signal advisory recommendation report."
     )
     return prompt
 
