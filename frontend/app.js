@@ -1145,14 +1145,36 @@ function escapeHtml(s) {
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── Check for existing profile ───────────────────────────
-    const existing=loadProfile();
-    if(existing?.canton) {
-        APP.profile=existing;
-        launchApp();
-    } else {
-        document.getElementById('onboarding-overlay').style.display='flex';
-        initOnboarding();
+    // ── Version Check to Reset Onboarding ────────────────────
+    fetch('/version')
+        .then(res => res.json())
+        .then(data => {
+            const currentSha = data.commit_sha || 'dev';
+            const savedSha = localStorage.getItem('croppulse_commit_sha');
+            if (savedSha && savedSha !== currentSha) {
+                console.log("New build detected (" + currentSha + "), resetting onboarding...");
+                localStorage.removeItem('croppulse_farm_profile');
+                localStorage.setItem('croppulse_commit_sha', currentSha);
+                window.location.reload();
+                return;
+            }
+            localStorage.setItem('croppulse_commit_sha', currentSha);
+            bootApp();
+        })
+        .catch(err => {
+            console.warn("Version check failed, booting anyway:", err);
+            bootApp();
+        });
+
+    function bootApp() {
+        const existing=loadProfile();
+        if(existing?.canton) {
+            APP.profile=existing;
+            launchApp();
+        } else {
+            document.getElementById('onboarding-overlay').style.display='flex';
+            initOnboarding();
+        }
     }
 
     // ── Tab switching ────────────────────────────────────────

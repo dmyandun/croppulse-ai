@@ -27,11 +27,21 @@ runner = Runner(
 
 app = get_fast_api_app(
     agents_dir=AGENT_DIR,
-    web=True,
+    web=False,
     a2a=True,
     default_llm_model="gemini-3.5-flash",
     gemini_enterprise_app_name="croppulse-ai",
 )
+
+BUILD_ID = "build_20260705_0045"
+
+
+@app.get("/version")
+async def custom_version():
+    return {
+        "version": "1.0.0",
+        "commit_sha": os.getenv("COMMIT_SHA", BUILD_ID),
+    }
 
 
 @app.post("/feedback")
