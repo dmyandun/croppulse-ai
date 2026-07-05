@@ -9,7 +9,7 @@ mcp = FastMCP("Google Sheets Mock MCP Server")
 DB_FILE = "crop_logs.json"
 
 
-def _load_sheet_data() -> list:
+def _load_db() -> dict:
     if os.path.exists(DB_FILE):
         try:
             with open(DB_FILE, encoding="utf-8") as f:
@@ -17,76 +17,109 @@ def _load_sheet_data() -> list:
         except Exception:
             pass
 
-    # Initialize mock data
-    default_logs = [
-        {
-            "timestamp": "2026-07-01 08:00:00",
-            "sheet": "crop_health",
-            "crop": "Corn",
-            "status": "Healthy",
-            "notes": "Vegetative stage, normal watering.",
+    # Initialize default farm database
+    default_db = {
+        "location": {
+            "country": "Ecuador",
+            "province": "Manabi",
+            "canton": "El Carmen",
+            "latitude": -0.2687,
+            "longitude": -79.4326,
         },
-        {
-            "timestamp": "2026-07-02 09:30:00",
-            "sheet": "crop_health",
-            "crop": "Soybeans",
-            "status": "Yellow Leaves",
-            "notes": "Possible nitrogen deficiency in Block B.",
-        },
-        {
-            "timestamp": "2026-07-03 14:15:00",
-            "sheet": "operations",
-            "action": "Fertilized",
-            "target": "Soybeans Block B",
-            "details": "Applied urea fertilizer.",
-        },
-    ]
+        "grid": [
+            {
+                "parcel_id": "P1",
+                "crop": "Cacao",
+                "status": "Healthy",
+                "neighbor_parcels": ["P2"],
+            },
+            {
+                "parcel_id": "P2",
+                "crop": "Banana",
+                "status": "Healthy",
+                "neighbor_parcels": ["P1", "P3"],
+            },
+            {
+                "parcel_id": "P3",
+                "crop": "Corn",
+                "status": "Dry",
+                "neighbor_parcels": ["P2"],
+            },
+        ],
+        "crop_plan": [
+            {"date": "2026-07-10", "parcel": "P1", "activity": "Pruning cacao trees"},
+            {
+                "date": "2026-07-15",
+                "parcel": "P2",
+                "activity": "Inspect banana leaves for Sigatoka",
+            },
+        ],
+        "pending_actions": [
+            {"parcel": "P3", "action": "Apply water/irrigate", "due_date": "2026-07-06"}
+        ],
+    }
     with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(default_logs, f, indent=2)
-    return default_logs
+        json.dump(default_db, f, indent=2)
+    return default_db
 
 
-def _save_sheet_data(data: list) -> None:
+def _save_db(data: dict) -> None:
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
 
 @mcp.tool()
-def append_log_row(sheet_name: str, row_json: str) -> str:
-    """Append a new row of log data to the specified sheet.
-
-    Args:
-        sheet_name: The name of the sheet target (e.g. 'crop_health', 'operations').
-        row_json: A JSON string containing keys and values for the row (e.g. '{"crop": "Wheat", "status": "Dry"}').
-    """
-    try:
-        parsed_row = json.loads(row_json)
-    except Exception:
-        return "Error: Invalid row_json format. Please provide valid JSON."
-
-    db = _load_sheet_data()
-    parsed_row["sheet"] = sheet_name
-    parsed_row["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    db.append(parsed_row)
-    _save_sheet_data(db)
-    return (
-        f"Successfully added row to sheet '{sheet_name}' at {parsed_row['timestamp']}."
-    )
+def read_farm_context() -> str:
+    """Read the current farm grid layout, crop plan, location, and pending actions from sheets."""
+    db = _load_db()
+    return json.dumps(db, indent=2)
 
 
 @mcp.tool()
-def get_sheet_rows(sheet_name: str) -> str:
-    """Get all rows for the specified sheet.
+def write_farm_indicators(indicators_json: str) -> str:
+    """Write updated indicators, health status, and crop plans back to sheets.
 
     Args:
-        sheet_name: The name of the sheet target (e.g. 'crop_health', 'operations').
+        indicators_json: A JSON string containing updates to parcel_health, pending_actions, next_activity, and crop_plan_updates.
     """
-    db = _load_sheet_data()
-    rows = [row for row in db if row.get("sheet") == sheet_name]
-    if not rows:
-        return f"No rows found in sheet '{sheet_name}'."
-    return json.dumps(rows, indent=2)
+    try:
+        updates = json.loads(indicators_json)
+    except Exception as e:
+        return f"Error: Invalid JSON input format ({e!s})."
+
+    db = _load_db()
+
+    # 1. Update parcel health in grid
+    health_updates = updates.get("parcel_health", {})
+    for grid_item in db.get("grid", []):
+        p_id = grid_item["parcel_id"]
+        if p_id in health_updates:
+            grid_item["status"] = health_updates[p_id]
+
+    # 2. Add/Overwrite pending actions
+    pending = updates.get("pending_actions", [])
+    if pending:
+        db["pending_actions"] = pending
+
+    # 3. Apply crop plan updates
+    plan_updates = updates.get("crop_plan_updates", [])
+    for item in plan_updates:
+        # Check if identical activity exists, else append
+        exists = False
+        for p in db.get("crop_plan", []):
+            if (
+                p.get("date") == item.get("date")
+                and p.get("parcel") == item.get("parcel")
+                and p.get("activity") == item.get("activity")
+            ):
+                exists = True
+                break
+        if not exists:
+            db.setdefault("crop_plan", []).append(item)
+
+    # Save the updated database
+    _save_db(db)
+    return f"Successfully updated sheets indicators at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}."
 
 
 if __name__ == "__main__":

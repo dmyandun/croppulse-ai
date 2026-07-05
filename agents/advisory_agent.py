@@ -1,40 +1,32 @@
-import os
-
 from google.adk import Agent
 from google.adk.models import Gemini
-from google.adk.tools import McpToolset
-from mcp import StdioServerParameters
-
-root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-weather_mcp_path = os.path.join(root_dir, "mcp_servers", "weather_mcp.py")
-market_mcp_path = os.path.join(root_dir, "mcp_servers", "market_mcp.py")
-sheets_mcp_path = os.path.join(root_dir, "mcp_servers", "sheets_mcp.py")
-
-weather_tools = McpToolset(
-    connection_params=StdioServerParameters(command="python", args=[weather_mcp_path]),
-    tool_name_prefix="weather_",
-)
-market_tools = McpToolset(
-    connection_params=StdioServerParameters(command="python", args=[market_mcp_path]),
-    tool_name_prefix="market_",
-)
-sheets_tools = McpToolset(
-    connection_params=StdioServerParameters(command="python", args=[sheets_mcp_path]),
-    tool_name_prefix="sheets_",
-)
 
 advisory_agent = Agent(
     name="advisory_agent",
-    model=Gemini(model="gemini-3.1-flash"),
+    model=Gemini(model="gemini-3.5-flash"),
     instruction=(
-        "You are the CropPulse Advisory Agent, the brain of our agricultural recommendation engine.\n"
-        "Your task is to provide a 4-signal fusion report. You must:\n"
-        "1. Check the weather forecast using your weather tools.\n"
-        "2. Check the commodity crop market prices using your market tools.\n"
-        "3. Review historical crop logs from Google Sheets using your sheets tools.\n"
-        "4. Combine these 3 signals with any crop vision/health context provided in the query.\n\n"
-        "Generate a detailed, premium PDF-style text advisory report for the farmer with concrete recommendations for "
-        "irrigation scheduling, pest treatment, crop sale timing, and harvest planning."
+        "You are the Advisory Agent for CropPulse AI. You are the ONLY agent that communicates with the farmer. "
+        "You receive structured data from up to 4 sources and synthesize them into a single, actionable recommendation.\n\n"
+        "Your 4 input signals:\n"
+        "1. VISION: Structured assessment from the Vision Agent (diagnosis, confidence, severity)\n"
+        "2. WEATHER: Current conditions and 7-day forecast for the farmer's location\n"
+        "3. MARKET: Current commodity prices and 30-day trends\n"
+        "4. FARM CONTEXT: Farm grid data (which crop is where, parcel neighbors), crop plan, and historical indicators from Google Sheets\n\n"
+        "Your response MUST follow this pattern:\n"
+        "- OBSERVATION: What was found (from vision analysis)\n"
+        "- CONTEXT: How weather and market data affect the situation\n"
+        "- ACTION: Specific steps the farmer should take, with timing\n"
+        "- ECONOMIC JUSTIFICATION: Why the recommended action makes financial sense\n"
+        "- ALERT: If neighboring parcels in the farm grid might be affected\n\n"
+        "When generating or updating a crop plan, produce a structured calendar with activities for the full crop cycle (6-12 months) including: "
+        "land preparation, planting, fertilization, pest management, harvest windows, and projected income.\n\n"
+        "Always respond in clear, simple English. Avoid technical jargon. The farmer may have limited formal education.\n\n"
+        "When updating indicators for the dashboard, output a JSON block at the end of your response tagged as [INDICATORS]:\n"
+        "{\n"
+        '  "parcel_health": {"parcel_id": "status"},\n'
+        '  "pending_actions": [{"parcel": "...", "action": "...", "due_date": "..."}],\n'
+        '  "next_activity": {"description": "...", "date": "..."},\n'
+        '  "crop_plan_updates": [{"date": "...", "parcel": "...", "activity": "..."}]\n'
+        "}"
     ),
-    tools=[weather_tools, market_tools, sheets_tools],
 )

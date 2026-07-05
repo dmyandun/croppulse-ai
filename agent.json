@@ -1,0 +1,12 @@
+{
+  "name": "croppulse-ai",
+  "description": "CropPulse AI Agricultural Decision Studio",
+  "version": "1.0.0",
+  "url": "http://127.0.0.1:8000/a2a/croppulse-ai/",
+  "skills": [],
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"]
+}

@@ -34,7 +34,10 @@ from a2a.types import (
     SendStreamingMessageResponse,
     TextPart,
 )
+from dotenv import load_dotenv
 from requests.exceptions import RequestException
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "http://127.0.0.1:8000"
 RUN_SSE_URL = BASE_URL + "/run_sse"
-A2A_RPC_URL = BASE_URL + "/a2a/app/"
+A2A_RPC_URL = BASE_URL + "/a2a/croppulse-ai/"
 AGENT_CARD_URL = A2A_RPC_URL + ".well-known/agent-card.json"
 FEEDBACK_URL = BASE_URL + "/feedback"
 
@@ -61,7 +64,7 @@ def start_server() -> subprocess.Popen[str]:
         sys.executable,
         "-m",
         "uvicorn",
-        "app.fast_api_app:app",
+        "app:app",
         "--host",
         "0.0.0.0",
         "--port",
@@ -131,7 +134,7 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_data = {"state": {"preferred_language": "English", "visit_count": 1}}
 
     session_response = requests.post(
-        f"{BASE_URL}/apps/app/users/{user_id}/sessions",
+        f"{BASE_URL}/apps/croppulse-ai/users/{user_id}/sessions",
         headers=HEADERS,
         json=session_data,
         timeout=60,
@@ -140,7 +143,7 @@ def test_adk_run_sse(server_fixture: subprocess.Popen[str]) -> None:
     session_id = session_response.json()["id"]
 
     data = {
-        "app_name": "app",
+        "app_name": "croppulse-ai",
         "user_id": user_id,
         "session_id": session_id,
         "new_message": {"role": "user", "parts": [{"text": "Hi!"}]},

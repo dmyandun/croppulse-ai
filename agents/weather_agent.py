@@ -17,7 +17,7 @@ weather_tools = McpToolset(
 
 weather_agent = Agent(
     name="weather_agent",
-    model=Gemini(model="gemini-3.1-flash"),
+    model=Gemini(model="gemini-3.5-flash"),
     instruction=(
         "You are the CropPulse Weather Specialist. Your role is to fetch weather forecasts using your weather tools "
         "and explain the implications (temperature, rainfall, wind) for the farmer's crops and activities."

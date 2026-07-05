@@ -14,8 +14,16 @@ AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 app = get_fast_api_app(
     agents_dir=AGENT_DIR,
     web=True,
-    default_llm_model="gemini-3.1-flash",
+    a2a=True,
+    default_llm_model="gemini-3.5-flash",
+    gemini_enterprise_app_name="croppulse-ai",
 )
+
+
+@app.post("/feedback")
+async def collect_feedback():
+    return {"status": "success"}
+
 
 # Mount custom frontend static files
 frontend_path = os.path.join(AGENT_DIR, "frontend")

@@ -17,7 +17,7 @@ market_tools = McpToolset(
 
 market_agent = Agent(
     name="market_agent",
-    model=Gemini(model="gemini-3.1-flash"),
+    model=Gemini(model="gemini-3.5-flash"),
     instruction=(
         "You are the CropPulse Market Analyst. Your role is to check commodity prices for crops and explain the "
         "implications (financial outlook, selling recommendations, price trends) for the farmer."

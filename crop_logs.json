@@ -1,0 +1,120 @@
+{
+  "location": {
+    "country": "Ecuador",
+    "province": "Manabi",
+    "canton": "El Carmen",
+    "latitude": -0.2687,
+    "longitude": -79.4326
+  },
+  "grid": [
+    {
+      "parcel_id": "P1",
+      "crop": "Cacao",
+      "status": "Healthy",
+      "neighbor_parcels": [
+        "P2"
+      ]
+    },
+    {
+      "parcel_id": "P2",
+      "crop": "Banana",
+      "status": "Healthy",
+      "neighbor_parcels": [
+        "P1",
+        "P3"
+      ]
+    },
+    {
+      "parcel_id": "P3",
+      "crop": "Corn",
+      "status": "Dry/Needs Water",
+      "neighbor_parcels": [
+        "P2"
+      ]
+    }
+  ],
+  "crop_plan": [
+    {
+      "date": "2026-07-10",
+      "parcel": "P1",
+      "activity": "Pruning cacao trees"
+    },
+    {
+      "date": "2026-07-15",
+      "parcel": "P2",
+      "activity": "Inspect banana leaves for Sigatoka"
+    },
+    {
+      "date": "2026-08-15",
+      "parcel": "P3",
+      "activity": "Harvest corn and clear land"
+    },
+    {
+      "date": "2026-11-15",
+      "parcel": "P1",
+      "activity": "Main Cacao Harvest starts"
+    },
+    {
+      "date": "2027-01-05",
+      "parcel": "P3",
+      "activity": "Plant corn for winter rainy cycle"
+    },
+    {
+      "date": "2026-07-06",
+      "parcel": "P3",
+      "activity": "Urgent irrigation of dry corn"
+    },
+    {
+      "date": "2026-07-06",
+      "parcel": "P3",
+      "activity": "Urgent irrigation"
+    },
+    {
+      "date": "2026-07-06",
+      "parcel": "P3",
+      "activity": "Urgent irrigation to save dry corn"
+    },
+    {
+      "date": "2026-07-10",
+      "parcel": "P1",
+      "activity": "Pruning cacao trees for disease prevention"
+    },
+    {
+      "date": "2026-07-15",
+      "parcel": "P2",
+      "activity": "Leaf inspection for Black Sigatoka"
+    },
+    {
+      "date": "2026-08-15",
+      "parcel": "P3",
+      "activity": "Harvest corn and clear dry crop residue"
+    },
+    {
+      "date": "2026-11-15",
+      "parcel": "P1",
+      "activity": "Main Cacao Harvest begins"
+    },
+    {
+      "date": "2027-01-05",
+      "parcel": "P3",
+      "activity": "Plant winter corn to utilize rainy season"
+    }
+  ],
+  "pending_actions": [
+    {
+      "parcel": "P3",
+      "action": "Urgent irrigation of dry corn",
+      "due_date": "2026-07-06"
+    },
+    {
+      "parcel": "P1",
+      "action": "Pruning cacao trees",
+      "due_date": "2026-07-10"
+    },
+    {
+      "parcel": "P2",
+      "action": "Inspect banana leaves for Sigatoka",
+      "due_date": "2026-07-15"
+    }
+  ]
+}

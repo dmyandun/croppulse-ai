@@ -12,6 +12,8 @@ CROP_MARKET_DATABASE = {
     "soybeans": {"price": 11.75, "unit": "bushel", "currency": "USD"},
     "coffee": {"price": 2.24, "unit": "pound", "currency": "USD"},
     "cocoa": {"price": 8450.00, "unit": "metric ton", "currency": "USD"},
+    "cacao": {"price": 8450.00, "unit": "metric ton", "currency": "USD"},
+    "banana": {"price": 7.50, "unit": "box (18.14 kg)", "currency": "USD"},
     "rice": {"price": 18.25, "unit": "cwt", "currency": "USD"},
 }
 
@@ -21,7 +23,7 @@ def get_crop_market_price(crop_name: str) -> str:
     """Get the current crop/commodity market price details.
 
     Args:
-        crop_name: The crop name (e.g. corn, wheat, soybeans, coffee, cocoa, rice).
+        crop_name: The crop name (e.g. corn, wheat, soybeans, coffee, cocoa, cacao, banana, rice).
     """
     key = crop_name.lower().strip()
     if key in CROP_MARKET_DATABASE:
