@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.cli.fast_api import get_fast_api_app
 from google.adk.cli.utils.service_factory import create_session_service_from_options
+from google.adk.events import Event, EventActions
 from google.adk.runners import Runner
 from google.genai import types
 
@@ -37,7 +38,7 @@ app = get_fast_api_app(
 # Unregister default ADK /run route to allow our custom legacy_run route override
 app.router.routes = [r for r in app.router.routes if r.path != "/run"]
 
-BUILD_ID = "build_20260705_1700"
+BUILD_ID = "build_20260705_1800"
 
 
 @app.get("/version")
@@ -112,13 +113,28 @@ async def legacy_run(request: Request):
 
         if isinstance(state_delta, dict) and state_delta:
             try:
-                session.state.update(state_delta)
+                # Persist the client-supplied state envelope via the session
+                # service so the workflow's ctx.state reflects it. In-memory
+                # session.state mutation is not enough — some session backends
+                # re-load state on run_async, and only append_event actually
+                # commits state_delta through the session's persistence layer.
+                seed_event = Event(
+                    author="user",
+                    actions=EventActions(state_delta=state_delta),
+                )
+                await session_service.append_event(session, seed_event)
             except Exception:
                 logging_mod = __import__("logging")
                 logging_mod.getLogger(__name__).warning(
                     "legacy_run: failed to apply state_delta (%d keys)",
                     len(state_delta),
                 )
+                # Fallback: best-effort direct mutation for backends that keep
+                # session.state fresh across run_async.
+                try:
+                    session.state.update(state_delta)
+                except Exception:
+                    pass
 
         message_parts = [types.Part.from_text(text=text)]
         for inline in image_inline_parts:
