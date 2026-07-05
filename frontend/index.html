@@ -85,12 +85,14 @@
 
             <div id="ob-sheets-config-group" style="display:none;animation:fadeIn 0.2s ease-out;margin-bottom:1rem;">
                 <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);padding:0.85rem;border-radius:0.5rem;margin-bottom:0.75rem;">
-                    <p style="font-size:0.78rem;color:#cbd5e1;margin:0 0 0.55rem;line-height:1.5;">
-                        <strong style="color:#60a5fa;">3 quick steps</strong> — takes about 2 minutes:
+                    <p style="font-size:0.78rem;color:#cbd5e1;margin:0 0 0.4rem;line-height:1.5;">
+                        <strong style="color:#60a5fa;">Optional</strong> — CropPulse works fully without Sheets. Sync unlocks cross-device access to your farm profile.
+                    </p>
+                    <p style="font-size:0.75rem;color:#cbd5e1;margin:0.55rem 0 0.4rem;line-height:1.55;">
+                        <strong>2 quick steps:</strong>
                     </p>
                     <ol style="margin:0;padding-left:1.15rem;font-size:0.75rem;color:#cbd5e1;line-height:1.55;">
-                        <li>Enable the <a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">Google Sheets API</a> for your project.</li>
-                        <li><a href="https://support.google.com/docs/answer/9331169" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">Share your sheet</a> with the service account below (Editor access).</li>
+                        <li>In your <a href="https://sheets.new" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">Google Sheet</a>, click <strong>Share</strong> and give <strong>Editor</strong> access to the service account below.</li>
                         <li>Paste your sheet URL or ID and continue.</li>
                     </ol>
                     <div style="margin-top:0.7rem;padding:0.55rem;background:rgba(0,0,0,0.35);border-radius:0.35rem;display:flex;align-items:center;gap:0.5rem;">
@@ -100,8 +102,7 @@
                         </button>
                     </div>
                     <p style="margin:0.6rem 0 0;font-size:0.68rem;color:#94a3b8;line-height:1.45;">
-                        Prefer a different account?
-                        <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noopener" style="color:#60a5fa;text-decoration:underline;">Manage service accounts</a>.
+                        No GCP setup required on your side — the CropPulse project already has the Sheets API enabled and uses this service account to read and write your sheet.
                     </p>
                 </div>
                 <div class="ob-field" style="margin-bottom:0.25rem;">

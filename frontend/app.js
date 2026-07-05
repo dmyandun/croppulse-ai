@@ -629,9 +629,10 @@ function initStep2() {
         const name = nameInput.value.trim();
         if (!name) return;
 
+        const cycleEl = document.getElementById('ob-crop-cycle');
         const record = {
             crop: (currentValidatedName || name).toLowerCase(),
-            cycle: cycleSelect.value,
+            cycle: cycleEl ? cycleEl.value : 'vegetative',
             photo: pendingCropPhoto ? pendingCropPhoto.dataUrl : null,
         };
 
