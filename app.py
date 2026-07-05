@@ -12,6 +12,7 @@ from google.adk.cli.utils.service_factory import create_session_service_from_opt
 from google.adk.runners import Runner
 from google.genai import types
 
+from mcp_servers.market_mcp import COMMODITIES, _normalise_commodity
 from workflow import root_workflow
 
 load_dotenv()
@@ -45,6 +46,28 @@ async def custom_version():
         "version": "1.0.0",
         "commit_sha": os.getenv("COMMIT_SHA", BUILD_ID),
     }
+
+
+@app.get("/api/market/validate-crop")
+async def validate_crop(name: str):
+    name_clean = name.strip()
+    match_key = _normalise_commodity(name_clean)
+    if match_key:
+        return {"status": "exact", "match": match_key}
+
+    name_lower = name_clean.lower()
+    matches = []
+    for key, meta in COMMODITIES.items():
+        if (
+            name_lower in key
+            or any(name_lower in alias for alias in meta["aliases"])
+            or key in name_lower
+        ):
+            matches.append(key)
+
+    if matches:
+        return {"status": "suggest", "matches": matches}
+    return {"status": "none"}
 
 
 @app.post("/feedback")

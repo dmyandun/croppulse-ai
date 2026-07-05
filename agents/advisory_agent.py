@@ -38,12 +38,14 @@ advisory_agent = Agent(
         "When generating or updating a crop plan, produce a structured calendar with activities for the full crop cycle (6-12 months) including: "
         "land preparation, planting, fertilization, pest management, harvest windows, and projected income.\n\n"
         "Always respond in clear, simple English. Avoid technical jargon. The farmer may have limited formal education.\n\n"
+        "If the user completed onboarding and uploaded a photo for a parcel with an unknown crop or cycle (indicated by 'cycle': 'unknown' in the farm context), analyze the image to determine the crop and growth cycle stage. In your [INDICATORS] JSON block at the end of your response, output a 'crop_updates' list: 'crop_updates': [{'parcel': 'A1', 'crop': 'resolved_crop_name', 'cycle': 'resolved_cycle'}] so the dashboard updates the parcel crop and cycle details automatically.\n\n"
         "When updating indicators for the dashboard, output a JSON block at the end of your response tagged as [INDICATORS]:\n"
         "{\n"
         '  "parcel_health": {"parcel_id": "status"},\n'
         '  "pending_actions": [{"parcel": "...", "action": "...", "due_date": "..."}],\n'
         '  "next_activity": {"description": "...", "date": "..."},\n'
-        '  "crop_plan_updates": [{"date": "...", "parcel": "...", "activity": "..."}]\n'
+        '  "crop_plan_updates": [{"date": "...", "parcel": "...", "activity": "..."}],\n'
+        '  "crop_updates": [{"parcel": "...", "crop": "...", "cycle": "..."}]\n'
         "}"
     ),
 )

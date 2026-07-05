@@ -228,26 +228,23 @@ async def sheets_write_node(ctx: Context, node_input: str) -> str:
                 await session.initialize()
 
                 # Write indicators and plan updates
-                ind_result = await _call_sheets_tool(
+                await _call_sheets_tool(
                     session,
                     "write_indicators",
                     {"sheet_id": sheet_id, "indicators_json": indicators_json},
                 )
 
                 # Append interaction log
-                log_result = await _call_sheets_tool(
+                await _call_sheets_tool(
                     session,
                     "append_interaction_log",
                     {"sheet_id": sheet_id, "log_entry_json": log_entry},
                 )
 
-                return json.dumps(
-                    {
-                        "indicators_write": ind_result,
-                        "interaction_log": log_result,
-                    },
-                    indent=2,
-                )
+                return advisory_text
 
     except Exception as e:
-        return json.dumps({"error": f"sheets_write_node failed: {e!s}"})
+        import logging
+
+        logging.getLogger(__name__).error(f"sheets_write_node failed: {e!s}")
+        return advisory_text

@@ -284,6 +284,13 @@
       "diagnosis": "*   **Parcel P3 (Corn):** Is experiencing severe dry conditions and urgent water stress.\n*   **Parcel P1 (Cacao):** Currently healthy, but scheduled maintenance is due.\n*   **Parcel P2 (Banana):** Cur",
       "recommendation": "1.  **IMMEDIATE ACTION (Next 24 Hours):** Irrigate **Parcel P3 (Corn)** immediately. It is dry and needs water right away to survive.\n2.  **BY JULY 10, 2026:** Prune your cacao trees in **Parcel P1**.",
       "date": "2026-07-04 22:23"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "Based on your farm records, your corn crop in **Parcel 3** is suffering from water stress and is very dry. It needs immediate water to survive. Your cacao in **Parcel 1** and bananas in **Parcel 2** a",
+      "recommendation": "Here is your step-by-step plan. Please follow these dates closely:",
+      "date": "2026-07-05 01:04"
     }
   ]
 }

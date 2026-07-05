@@ -40,7 +40,22 @@ const CROPS = [
     { id:'other',    label:'Other',    icon:'🌱', bg:'#E6F1FB', tx:'#1e40af', color:'#3b82f6' },
     { id:'empty',    label:'Empty',    icon:'✕',  bg:null,      tx:null,      color:'#56708a'  },
 ];
-const cropOf = id => CROPS.find(c => c.id === id) || null;
+const cropOf = id => {
+    const cropId = (id && typeof id === 'object') ? id.crop : id;
+    const found = CROPS.find(c => c.id === cropId) || null;
+    if (found) return found;
+    if (cropId && cropId !== 'empty') {
+        return {
+            id: cropId,
+            label: cropId.charAt(0).toUpperCase() + cropId.slice(1),
+            icon: '🌱',
+            bg: '#E6F1FB',
+            tx: '#1e40af',
+            color: '#3b82f6'
+        };
+    }
+    return null;
+};
 
 // WMO weather codes → short description
 const WMO = {
@@ -407,26 +422,62 @@ function renderObGrid() {
     });
 }
 
+let pendingCropPhoto = null;
+
 function openObModal(id) {
-    _selectedCell=id;
-    document.getElementById('ob-crop-cell-label').textContent=id;
-    const cur=_gridState[id];
-    const opts=document.getElementById('ob-crop-options');
-    opts.innerHTML='';
-    CROPS.forEach(cr=>{
-        const b=document.createElement('button');
-        b.className='ob-crop-option'+(cr.id===cur?' selected':'');
-        b.innerHTML=`<span style="font-size:1.6rem">${cr.icon}</span>${cr.label}`;
-        b.addEventListener('click',()=>{ _gridState[id]=cr.id==='empty'?null:cr.id; closeObModal(); renderObGrid(); });
+    _selectedCell = id;
+    document.getElementById('ob-crop-cell-label').textContent = id;
+    
+    // Reset details preview
+    pendingCropPhoto = null;
+    document.getElementById('ob-crop-photo-preview-wrap').style.display = 'none';
+    document.getElementById('ob-crop-photo-preview').src = '';
+    document.getElementById('ob-crop-photo-filename').textContent = '';
+    
+    const cur = _gridState[id];
+    const opts = document.getElementById('ob-crop-options');
+    opts.innerHTML = '';
+    
+    CROPS.forEach(cr => {
+        const b = document.createElement('button');
+        const isSelected = cur && (typeof cur === 'object' ? cur.crop === cr.id : cur === cr.id);
+        b.className = 'ob-crop-option' + (isSelected ? ' selected' : '');
+        b.innerHTML = `<span style="font-size:1.6rem">${cr.icon}</span>${cr.label}`;
+        
+        b.addEventListener('click', () => {
+            if (cr.id === 'empty') {
+                _gridState[id] = null;
+                closeObModal();
+                renderObGrid();
+            } else {
+                // Show Screen 2 Details Form
+                document.getElementById('ob-crop-screen-selection').style.display = 'none';
+                document.getElementById('ob-crop-screen-details').style.display = 'block';
+                
+                const nameInput = document.getElementById('ob-custom-crop-name');
+                nameInput.value = cr.id === 'other' ? '' : cr.label;
+                
+                const cycleSelect = document.getElementById('ob-crop-cycle');
+                cycleSelect.value = (cur && typeof cur === 'object') ? cur.cycle : 'vegetative';
+                
+                nameInput.dispatchEvent(new Event('input'));
+                cycleSelect.dispatchEvent(new Event('change'));
+            }
+        });
         opts.appendChild(b);
     });
-    document.getElementById('ob-crop-modal').style.display='flex';
-    document.body.style.overflow='hidden';
+    
+    document.getElementById('ob-crop-screen-selection').style.display = 'block';
+    document.getElementById('ob-crop-screen-details').style.display = 'none';
+    
+    document.getElementById('ob-crop-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
+
 function closeObModal() {
-    document.getElementById('ob-crop-modal').style.display='none';
-    document.body.style.overflow='';
-    _selectedCell=null;
+    document.getElementById('ob-crop-modal').style.display = 'none';
+    document.body.style.overflow = '';
+    _selectedCell = null;
 }
 
 function initStep2() {
@@ -446,21 +497,162 @@ function initStep2() {
         document.getElementById('dot-2').classList.remove('active');
     });
     document.getElementById('ob-crop-modal-close').addEventListener('click',closeObModal);
+    document.getElementById('ob-crop-details-close').addEventListener('click',closeObModal);
     document.getElementById('ob-crop-modal').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeObModal(); });
-    document.getElementById('ob-start-btn').addEventListener('click',finishOnboarding);
+    
+    document.getElementById('ob-crop-details-back').addEventListener('click',()=>{
+        document.getElementById('ob-crop-screen-selection').style.display = 'block';
+        document.getElementById('ob-crop-screen-details').style.display = 'none';
+    });
+
+    const cycleSelect = document.getElementById('ob-crop-cycle');
+    const photoGroup = document.getElementById('ob-crop-photo-group');
+    cycleSelect.addEventListener('change', () => {
+        if (cycleSelect.value === 'unknown') {
+            photoGroup.style.display = 'block';
+        } else {
+            photoGroup.style.display = 'none';
+        }
+    });
+
+    const photoBtn = document.getElementById('ob-crop-photo-btn');
+    const photoInput = document.getElementById('ob-crop-photo-input');
+    const photoPreviewWrap = document.getElementById('ob-crop-photo-preview-wrap');
+    const photoPreview = document.getElementById('ob-crop-photo-preview');
+    const photoFilename = document.getElementById('ob-crop-photo-filename');
+    const photoRemove = document.getElementById('ob-crop-photo-remove');
+
+    photoBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        photoInput.click();
+    });
+
+    photoInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                pendingCropPhoto = {
+                    dataUrl: evt.target.result,
+                    mimeType: file.type
+                };
+                photoPreview.src = evt.target.result;
+                photoFilename.textContent = file.name;
+                photoPreviewWrap.style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    photoRemove?.addEventListener('click', (e) => {
+        e.preventDefault();
+        pendingCropPhoto = null;
+        photoInput.value = '';
+        photoPreview.src = '';
+        photoFilename.textContent = '';
+        photoPreviewWrap.style.display = 'none';
+    });
+
+    let validationTimeout = null;
+    const nameInput = document.getElementById('ob-custom-crop-name');
+    const msgEl = document.getElementById('ob-crop-validation-msg');
+    const sugBox = document.getElementById('ob-crop-suggestions-box');
+    
+    let currentValidatedName = '';
+
+    nameInput.addEventListener('input', () => {
+        clearTimeout(validationTimeout);
+        const name = nameInput.value.trim();
+        if (!name) {
+            msgEl.style.display = 'none';
+            sugBox.style.display = 'none';
+            return;
+        }
+        validationTimeout = setTimeout(() => {
+            fetch(`/api/market/validate-crop?name=${encodeURIComponent(name)}`)
+                .then(r => r.json())
+                .then(data => {
+                    sugBox.innerHTML = '';
+                    sugBox.style.display = 'none';
+                    if (data.status === 'exact') {
+                        msgEl.textContent = `✓ Price list active for ${data.match}`;
+                        msgEl.style.color = '#10b981';
+                        msgEl.style.display = 'block';
+                        currentValidatedName = data.match;
+                    } else if (data.status === 'suggest') {
+                        msgEl.textContent = `⚠️ No exact match. Did you mean:`;
+                        msgEl.style.color = '#f59e0b';
+                        msgEl.style.display = 'block';
+                        sugBox.style.display = 'flex';
+                        data.matches.forEach(m => {
+                            const btn = document.createElement('button');
+                            btn.className = 'ob-btn-ghost';
+                            btn.style.padding = '0.2rem 0.5rem';
+                            btn.style.fontSize = '0.75rem';
+                            btn.style.background = '#334155';
+                            btn.style.color = '#f8fafc';
+                            btn.style.borderRadius = '0.25rem';
+                            btn.style.border = 'none';
+                            btn.style.cursor = 'pointer';
+                            btn.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+                            btn.addEventListener('click', (evt) => {
+                                evt.preventDefault();
+                                nameInput.value = m;
+                                nameInput.dispatchEvent(new Event('input'));
+                            });
+                            sugBox.appendChild(btn);
+                        });
+                        currentValidatedName = name;
+                    } else {
+                        msgEl.textContent = `ℹ️ No price list found for '${name}'. You can still keep it.`;
+                        msgEl.style.color = '#94a3b8';
+                        msgEl.style.display = 'block';
+                        currentValidatedName = name;
+                    }
+                });
+        }, 300);
+    });
+
+    document.getElementById('ob-crop-details-save').addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name) return;
+        
+        _gridState[_selectedCell] = {
+            crop: currentValidatedName.toLowerCase() || name.toLowerCase(),
+            cycle: cycleSelect.value,
+            photo: pendingCropPhoto ? pendingCropPhoto.dataUrl : null
+        };
+        
+        closeObModal();
+        renderObGrid();
+    });
+
+    document.getElementById('ob-start-btn').addEventListener('click', finishOnboarding);
 }
 
 async function finishOnboarding() {
-    const rows=obRows(), cols=obCols();
-    const parcels=Object.entries(_gridState)
-        .filter(([,c])=>c!==null)
-        .map(([id,c])=>({ id, crop:c, area_ha:1.0, status:'Healthy' }));
-    APP.profile = { ...APP.profile, rows, cols, grid:_gridState, parcels, setup_date:new Date().toISOString() };
+    const rows = obRows(), cols = obCols();
+    const parcels = Object.entries(_gridState)
+        .filter(([, c]) => c !== null)
+        .map(([id, c]) => {
+            const cropVal = (typeof c === 'object') ? c.crop : c;
+            const cycleVal = (typeof c === 'object') ? c.cycle : 'vegetative';
+            const photoVal = (typeof c === 'object') ? c.photo : null;
+            return {
+                id,
+                crop: cropVal,
+                cycle: cycleVal,
+                photo: photoVal,
+                area_ha: 1.0,
+                status: 'Healthy'
+            };
+        });
+    APP.profile = { ...APP.profile, rows, cols, grid: _gridState, parcels, setup_date: new Date().toISOString() };
     saveProfile(APP.profile);
-    document.getElementById('ob-start-btn').disabled=true;
-    document.getElementById('ob-saving-msg').style.display='flex';
-    try { await persistFarm(APP.profile); } catch(e) { console.warn('Backend save skipped:',e.message); }
-    document.getElementById('ob-saving-msg').style.display='none';
+    document.getElementById('ob-start-btn').disabled = true;
+    document.getElementById('ob-saving-msg').style.display = 'flex';
+    try { await persistFarm(APP.profile); } catch (e) { console.warn('Backend save skipped:', e.message); }
+    document.getElementById('ob-saving-msg').style.display = 'none';
     launchApp();
 }
 
@@ -1030,7 +1222,8 @@ async function sendMessage() {
     const text=input.value.trim();
     if(!text&&!APP.pendingImage) return;
 
-    const imgDataUrl=APP.pendingImage?.dataUrl||null;
+    const img = APP.pendingImage;
+    const imgDataUrl=img?.dataUrl||null;
     addMessage('user', text||'[Photo attached]', imgDataUrl);
     input.value=''; sendBtn.disabled=true;
     clearImageAttachment();
@@ -1046,7 +1239,7 @@ async function sendMessage() {
     const fullMessage=contextParts.join(' ');
 
     try {
-        const response=await agentRun(fullMessage);
+        const response=await agentRun(fullMessage, img);
         removeTypingIndicator();
         const msgEl=addMessage('agent', response);
 
@@ -1064,6 +1257,29 @@ async function sendMessage() {
                     renderIndicators_farm();
                 }
                 if(inds.weather) { APP.weather=inds.weather; updateWeatherIndicator(); }
+                if(inds.crop_updates) {
+                    inds.crop_updates.forEach(upd => {
+                        const pIdx = APP.profile.parcels.findIndex(p => p.id === upd.parcel);
+                        if (pIdx >= 0) {
+                            APP.profile.parcels[pIdx].crop = upd.crop;
+                            if (upd.cycle) APP.profile.parcels[pIdx].cycle = upd.cycle;
+                        }
+                        if (APP.profile.grid && APP.profile.grid[upd.parcel]) {
+                            if (typeof APP.profile.grid[upd.parcel] === 'object') {
+                                APP.profile.grid[upd.parcel].crop = upd.crop;
+                                if (upd.cycle) APP.profile.grid[upd.parcel].cycle = upd.cycle;
+                            } else {
+                                APP.profile.grid[upd.parcel] = {
+                                    crop: upd.crop,
+                                    cycle: upd.cycle || 'vegetative',
+                                    photo: null
+                                };
+                            }
+                        }
+                    });
+                    saveProfile(APP.profile);
+                    renderFarmGrid();
+                }
                 if(inds.price&&inds.crop) { APP.prices[inds.crop]=inds; updatePriceIndicator(inds.crop); }
             } catch {}
         }
@@ -1156,13 +1372,23 @@ async function fetchWeatherDirect(lat, lng) {
 // ─────────────────────────────────────────────────────────────
 // ADK AGENT CALL  (POST /run)
 // -------------------------------------------------------------
-async function agentRun(text) {
+async function agentRun(text, pendingImage = null) {
+    const parts = [{ text }];
+    if (pendingImage) {
+        const base64 = pendingImage.dataUrl.split(',')[1];
+        parts.push({
+            inline_data: {
+                mime_type: pendingImage.mimeType,
+                data: base64
+            }
+        });
+    }
     const res=await fetch('/run',{
         method:'POST', headers:{'Content-Type':'application/json'},
         signal:AbortSignal.timeout(30000),
         body:JSON.stringify({
             user_id:APP.userId, session_id:APP.sessionId,
-            new_message:{ parts:[{text}] },
+            new_message:{ parts },
         }),
     });
     if(!res.ok) throw new Error(`Agent HTTP ${res.status}`);

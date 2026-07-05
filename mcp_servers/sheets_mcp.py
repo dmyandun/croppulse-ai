@@ -499,6 +499,7 @@ def write_indicators(sheet_id: str, indicators_json: str) -> str:
         health = payload.get("parcel_health", {})
         pending = payload.get("pending_actions", [])
         plan_updates = payload.get("crop_plan_updates", [])
+        crop_updates = payload.get("crop_updates", [])
         for parcel_id, status in health.items():
             action = next(
                 (p.get("action", "") for p in pending if p.get("parcel") == parcel_id),
@@ -526,6 +527,19 @@ def write_indicators(sheet_id: str, indicators_json: str) -> str:
             if not found:
                 existing.append(upd)
         db["Indicators"] = existing
+        # Also apply crop name/cycle updates
+        if crop_updates:
+            grid = db.get("FarmGrid", {})
+            parcels = grid.get("parcels", [])
+            for upd in crop_updates:
+                for p in parcels:
+                    if p.get("id") == upd.get("parcel"):
+                        if "crop" in upd:
+                            p["crop"] = upd["crop"]
+                        if "cycle" in upd:
+                            p["cycle"] = upd["cycle"]
+            grid["parcels"] = parcels
+            db["FarmGrid"] = grid
         # Also apply plan updates
         if plan_updates:
             plan = db.get("CropPlan", [])
@@ -555,6 +569,24 @@ def write_indicators(sheet_id: str, indicators_json: str) -> str:
         headers = ["parcel", "health_status", "last_inspection", "pending_action"]
         rows = [[i.get(h, "") for h in headers] for i in indicator_list]
         _clear_and_write(ws, headers, rows)
+
+        # Update FarmGrid worksheet if crop_updates present
+        if crop_updates:
+            try:
+                ws_grid = ss.worksheet("FarmGrid")
+                grid_records = _sheet_to_records(ws_grid)
+                headers_grid = ["id", "crop", "area_ha", "status", "cycle"]
+                for upd in crop_updates:
+                    for r in grid_records:
+                        if r.get("id") == upd.get("parcel"):
+                            if "crop" in upd:
+                                r["crop"] = upd["crop"]
+                            if "cycle" in upd:
+                                r["cycle"] = upd["cycle"]
+                rows_grid = [[r.get(h, "") for h in headers_grid] for r in grid_records]
+                _clear_and_write(ws_grid, headers_grid, rows_grid)
+            except Exception:
+                pass
         return json.dumps(
             {
                 "status": "ok",
@@ -603,7 +635,7 @@ def write_farm_grid(sheet_id: str, grid_json: str) -> str:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
         ws = ss.worksheet("FarmGrid")
-        headers = ["id", "crop", "area_ha", "status"]
+        headers = ["id", "crop", "area_ha", "status", "cycle"]
         rows = [[p.get(h, "") for h in headers] for p in grid.get("parcels", [])]
         _clear_and_write(ws, headers, rows)
         return json.dumps(

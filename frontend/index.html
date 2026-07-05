@@ -150,12 +150,65 @@
 
     <!-- Crop picker modal -->
     <div id="ob-crop-modal" class="ob-crop-modal" style="display:none" role="dialog" aria-label="Select crop">
-        <div class="ob-crop-modal-inner">
-            <div class="ob-crop-modal-header">
-                <span id="ob-crop-modal-title">Assign crop to <strong id="ob-crop-cell-label"></strong></span>
-                <button id="ob-crop-modal-close" class="ob-modal-close" aria-label="Close">&times;</button>
+        <div class="ob-crop-modal-inner" style="max-width:420px;background:#1e293b;border:1px solid #334155;color:#f8fafc;border-radius:0.75rem;padding:1.5rem;box-shadow:0 10px 25px rgba(0,0,0,0.4);">
+            
+            <!-- SCREEN 1: Crop Grid Selection -->
+            <div id="ob-crop-screen-selection">
+                <div class="ob-crop-modal-header" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:0.75rem;margin-bottom:1rem;">
+                    <span id="ob-crop-modal-title" style="font-weight:700;">Assign crop to <strong id="ob-crop-cell-label"></strong></span>
+                    <button id="ob-crop-modal-close" class="ob-modal-close" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;" aria-label="Close">&times;</button>
+                </div>
+                <div class="ob-crop-options" id="ob-crop-options"></div>
             </div>
-            <div class="ob-crop-options" id="ob-crop-options"></div>
+
+            <!-- SCREEN 2: Custom details ("Other" / Details configuration) -->
+            <div id="ob-crop-screen-details" style="display:none;">
+                <div class="ob-crop-modal-header" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;padding-bottom:0.75rem;margin-bottom:1rem;">
+                    <button id="ob-crop-details-back" class="ob-btn-ghost" style="padding:0;font-size:0.9rem;display:flex;align-items:center;gap:0.35rem;background:none;border:none;color:#3b82f6;cursor:pointer;"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                    <span style="font-weight:700;">Crop Details</span>
+                    <button id="ob-crop-details-close" class="ob-modal-close" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;" aria-label="Close">&times;</button>
+                </div>
+                
+                <!-- Crop Name input with suggestions -->
+                <div class="ob-field" style="margin-bottom:1rem;">
+                    <label for="ob-custom-crop-name" class="ob-label" style="display:block;margin-bottom:0.35rem;font-size:0.85rem;color:#94a3b8;"><i class="fa-solid fa-tag"></i> Crop Name</label>
+                    <input type="text" id="ob-custom-crop-name" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:0.375rem;padding:0.55rem;color:#f8fafc;font-size:0.9rem;" placeholder="e.g. Avocado, Mango, Cocoa...">
+                    <div id="ob-crop-validation-msg" style="font-size:0.8rem;margin-top:0.35rem;display:none;"></div>
+                    <div id="ob-crop-suggestions-box" style="display:none;background:#0f172a;border:1px solid #334155;border-radius:0.375rem;padding:0.5rem;margin-top:0.5rem;font-size:0.8rem;gap:0.35rem;flex-wrap:wrap;"></div>
+                </div>
+
+                <!-- Life Cycle dropdown -->
+                <div class="ob-field" style="margin-bottom:1.25rem;">
+                    <label for="ob-crop-cycle" class="ob-label" style="display:block;margin-bottom:0.35rem;font-size:0.85rem;color:#94a3b8;"><i class="fa-solid fa-circle-nodes"></i> Life Cycle Stage</label>
+                    <div class="ob-select-wrap" style="position:relative;">
+                        <select id="ob-crop-cycle" class="ob-select" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:0.375rem;padding:0.55rem;color:#f8fafc;font-size:0.85rem;appearance:none;-webkit-appearance:none;" aria-label="Select crop cycle">
+                            <option value="seedling">Seedling (Initial growth)</option>
+                            <option value="vegetative">Vegetative (Active leaf/stem growth)</option>
+                            <option value="flowering_fruiting">Flowering / Fruiting</option>
+                            <option value="harvesting">Harvest Ready</option>
+                            <option value="unknown">I don't know (take/upload photo)</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down ob-select-arrow" style="right:12px;position:absolute;top:50%;transform:translateY(-50%);pointer-events:none;color:#94a3b8;"></i>
+                    </div>
+                </div>
+
+                <!-- Optional image capture block -->
+                <div id="ob-crop-photo-group" style="display:none;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <span style="font-size:0.8rem;color:#60a5fa;font-weight:600;"><i class="fa-solid fa-camera"></i> Crop Photo Analysis</span>
+                        <button id="ob-crop-photo-btn" class="ob-btn-ghost" style="padding:0.25rem 0.5rem;font-size:0.75rem;background:#1e293b;border:1px solid #334155;border-radius:0.25rem;color:#3b82f6;cursor:pointer;"><i class="fa-solid fa-upload"></i> Choose Photo</button>
+                    </div>
+                    <input type="file" id="ob-crop-photo-input" accept="image/*" style="display:none;">
+                    <div id="ob-crop-photo-preview-wrap" style="display:none;align-items:center;gap:0.75rem;margin-top:0.5rem;">
+                        <img id="ob-crop-photo-preview" src="" style="width:48px;height:48px;object-fit:cover;border-radius:0.25rem;border:1px solid #334155;">
+                        <span id="ob-crop-photo-filename" style="font-size:0.75rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;"></span>
+                        <button id="ob-crop-photo-remove" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.1rem;margin-left:auto;">&times;</button>
+                    </div>
+                </div>
+
+                <button id="ob-crop-details-save" class="ob-btn ob-btn-primary ob-btn-full" style="width:100%;">Save Details</button>
+            </div>
+
         </div>
     </div>
 </div>
