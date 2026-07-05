@@ -5,6 +5,7 @@
 .venv/
 venv/
 .pytest_cache/
+.ruff_cache/
 .adk/
 artifacts/
 __pycache__/
@@ -15,3 +16,27 @@ __pycache__/
 .saved_chats
 .google-agents-cli/
 tools/a2a-inspector/
+
+# Local dev artefacts that must never enter the container image.
+# crop_logs.json is the local mock DB written by sheets_mcp when Sheets creds
+# are unavailable — its presence would OVERRIDE a real Sheet on startup.
+crop_logs.json
+
+# IDE / assistant caches
+.claude/
+.gemini/
+.antigravity/
+
+# Empty nested scaffold directory left by an earlier agents-cli scaffold.
+croppulse-ai/
+
+# Bash-on-Windows filename corruption guard: when a script tries to write
+# to a path like "C:\Users\..." from Git Bash / MSYS, NTFS transforms the
+# colon into Unicode PUA U+F03A and the resulting untracked file lands at
+# the repo root. That kind of filename is packaged fine by Cloud Build and
+# accepted by Artifact Registry, but Cloud Run's gVisor image import step
+# rejects any layer that contains PUA / control chars in a path, aborting
+# the deploy with a generic "Container image import failed" error. This
+# pattern catches any filename that starts with a drive letter + colon.
+[A-Z]:*
+[a-z]:*

@@ -5,3 +5,21 @@
 artifacts
 scratch
 *.log
+__pycache__/
+
+# Local mock DB — must not shadow the real Sheets integration on startup.
+crop_logs.json
+
+# IDE / assistant caches.
+.claude/
+.gemini/
+.antigravity/
+
+# Empty nested scaffold left by earlier agents-cli scaffold.
+croppulse-ai/
+
+# gVisor rejects layers that contain PUA / control characters in file names.
+# Filenames beginning with a drive-letter + colon come from bash-on-Windows
+# path corruption (see .gcloudignore for the full explanation).
+[A-Z]:*
+[a-z]:*
