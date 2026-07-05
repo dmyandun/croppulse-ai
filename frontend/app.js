@@ -282,6 +282,45 @@ function initStep1() {
     const bdg = document.getElementById('ob-location-badge');
     const btx = document.getElementById('ob-location-text');
 
+    // Database connection toggles
+    const btnLocal = document.getElementById('ob-db-btn-local');
+    const btnSheets = document.getElementById('ob-db-btn-sheets');
+    const sheetsGroup = document.getElementById('ob-sheets-config-group');
+    const inputSheetId = document.getElementById('ob-sheet-id');
+
+    let dbMode = 'local';
+
+    btnLocal?.addEventListener('click', () => {
+        dbMode = 'local';
+        btnLocal.classList.add('active');
+        btnLocal.style.background = '#3b82f6';
+        btnLocal.style.borderColor = '#2563eb';
+        btnLocal.style.color = '#ffffff';
+        
+        btnSheets.classList.remove('active');
+        btnSheets.style.background = '#1e293b';
+        btnSheets.style.borderColor = '#334155';
+        btnSheets.style.color = '#94a3b8';
+        
+        sheetsGroup.style.display = 'none';
+        inputSheetId.value = '';
+    });
+
+    btnSheets?.addEventListener('click', () => {
+        dbMode = 'sheets';
+        btnSheets.classList.add('active');
+        btnSheets.style.background = '#10b981';
+        btnSheets.style.borderColor = '#059669';
+        btnSheets.style.color = '#ffffff';
+        
+        btnLocal.classList.remove('active');
+        btnLocal.style.background = '#1e293b';
+        btnLocal.style.borderColor = '#334155';
+        btnLocal.style.color = '#94a3b8';
+        
+        sheetsGroup.style.display = 'block';
+    });
+
     function chk() {
         const ok = cEl.value && pEl.value && kEl.value;
         nxt.disabled = !ok;
@@ -311,11 +350,20 @@ function initStep1() {
     kEl.addEventListener('change', chk);
     nxt.addEventListener('click', () => {
         if (nxt.disabled) return;
+
+        let sheetId = '';
+        if (dbMode === 'sheets' && inputSheetId.value.trim()) {
+            const rawVal = inputSheetId.value.trim();
+            const urlMatch = rawVal.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            sheetId = urlMatch ? urlMatch[1] : rawVal;
+        }
+
         APP.profile = {
             country:       cEl.value,
             country_label: cEl.options[cEl.selectedIndex].text,
             province:      pEl.value,
             canton:        kEl.value,
+            sheet_id:      sheetId,
         };
         goToStep2();
     });
@@ -418,7 +466,7 @@ async function finishOnboarding() {
 
 async function persistFarm(profile) {
     const body = JSON.stringify({ user_id:APP.userId, session_id:APP.sessionId,
-        new_message:{ parts:[{ text:`Save my farm profile: ${JSON.stringify({ rows:profile.rows, cols:profile.cols, parcels:profile.parcels, location:{ canton:profile.canton, province:profile.province, country:profile.country_label } })}` }] } });
+        new_message:{ parts:[{ text:`Save my farm profile: ${JSON.stringify({ sheet_id:profile.sheet_id, rows:profile.rows, cols:profile.cols, parcels:profile.parcels, location:{ canton:profile.canton, province:profile.province, country:profile.country_label } })}` }] } });
     await fetch('/run',{ method:'POST', headers:{'Content-Type':'application/json'}, body, signal:AbortSignal.timeout(7000) });
 }
 
@@ -433,6 +481,21 @@ function launchApp() {
     // Apply profile to UI
     const loc=`${APP.profile.canton}, ${APP.profile.country_label||APP.profile.province}`;
     document.getElementById('topbar-location-text').textContent=loc;
+
+    // Update DB status badge in topbar
+    const dbBdg = document.getElementById('topbar-db-status');
+    const dbTxt = document.getElementById('db-status-text');
+    if (dbBdg && dbTxt) {
+        if (APP.profile.sheet_id) {
+            dbTxt.textContent = "Sheets Active";
+            dbBdg.style.background = "rgba(16,185,129,0.15)";
+            dbBdg.style.color = "#10b981";
+        } else {
+            dbTxt.textContent = "Local DB";
+            dbBdg.style.background = "rgba(245,158,11,0.15)";
+            dbBdg.style.color = "#f59e0b";
+        }
+    }
 
     // Seed crop plan from profile if backend offline
     APP.cropPlan = buildCropPlan(APP.profile);

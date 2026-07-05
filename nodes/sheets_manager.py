@@ -49,7 +49,62 @@ async def sheets_read_node(ctx: Context, node_input: str) -> str:
       - selected_crop (first problematic crop or first crop)
       - sheet_id
     """
-    sheet_id = _SHEET_ID
+    message_text = str(node_input).strip()
+    sheet_id = ctx.state.get("sheet_id", _SHEET_ID)
+
+    # ── Handle Profile and Grid Saving from Onboarding ────────────────────────
+    if message_text.startswith("Save my farm profile:"):
+        try:
+            profile_data_str = message_text[len("Save my farm profile:") :].strip()
+            profile_data = json.loads(profile_data_str)
+
+            # Extract sheet_id if passed from frontend onboarding
+            if profile_data.get("sheet_id"):
+                sheet_id = profile_data["sheet_id"]
+                ctx.state["sheet_id"] = sheet_id
+
+            loc = profile_data.get("location", {})
+            new_profile = {
+                "country": loc.get("country", "Ecuador"),
+                "province": loc.get("province", "Manabí"),
+                "canton": loc.get("canton", "El Carmen"),
+                "latitude": float(profile_data.get("latitude", -0.2687)),
+                "longitude": float(profile_data.get("longitude", -79.4326)),
+                "farmer_name": profile_data.get("farmer_name", "Farmer"),
+                "farm_name": profile_data.get("farm_name", "Farm"),
+                "total_hectares": float(profile_data.get("total_hectares", 5.0)),
+            }
+
+            new_grid = {
+                "rows": int(profile_data.get("rows", 2)),
+                "cols": int(profile_data.get("cols", 3)),
+                "parcels": [
+                    {
+                        "id": p["id"],
+                        "crop": p["crop"],
+                        "area_ha": float(p.get("area_ha", 1.0)),
+                        "status": p.get("status", "Healthy"),
+                    }
+                    for p in profile_data.get("parcels", [])
+                ],
+            }
+
+            params = StdioServerParameters(command="python", args=[SHEETS_MCP_PATH])
+            async with stdio_client(params) as (read_stream, write_stream):
+                async with ClientSession(read_stream, write_stream) as session:
+                    await session.initialize()
+                    await _call_sheets_tool(
+                        session,
+                        "write_farm_profile",
+                        {"sheet_id": sheet_id, "profile_json": json.dumps(new_profile)},
+                    )
+                    await _call_sheets_tool(
+                        session,
+                        "write_farm_grid",
+                        {"sheet_id": sheet_id, "grid_json": json.dumps(new_grid)},
+                    )
+        except Exception as e:
+            print(f"Error saving onboarding profile: {e}")
 
     params = StdioServerParameters(command="python", args=[SHEETS_MCP_PATH])
 

@@ -265,6 +265,53 @@ def read_farm_profile(sheet_id: str = "") -> str:
         return json.dumps({"error": f"read_farm_profile failed: {e!s}"})
 
 
+@mcp.tool()
+def write_farm_profile(sheet_id: str, profile_json: str) -> str:
+    """Write or update the farmer and farm location profile in the 'Profile' tab.
+
+    Args:
+        sheet_id: Google Spreadsheet ID. Empty → writes to mock.
+        profile_json: JSON dict: {country, province, canton, latitude, longitude,
+                                 farmer_name, farm_name, total_hectares}
+
+    Returns:
+        Confirmation JSON.
+    """
+    try:
+        profile = json.loads(profile_json)
+    except Exception as e:
+        return json.dumps({"error": f"Invalid JSON: {e!s}"})
+
+    if not sheet_id or _use_mock():
+        db = _load_mock()
+        db["Profile"] = profile
+        _save_mock(db)
+        return json.dumps(
+            {
+                "status": "ok",
+                "profile_written": True,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
+    try:
+        gc = _get_sheets_client()
+        ss = gc.open_by_key(sheet_id)
+        ws = ss.worksheet("Profile")
+        headers = ["key", "value"]
+        rows = [[k, str(v)] for k, v in profile.items()]
+        _clear_and_write(ws, headers, rows)
+        return json.dumps(
+            {
+                "status": "ok",
+                "profile_written": True,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        return json.dumps({"error": f"write_farm_profile failed: {e!s}"})
+
+
 # ---------------------------------------------------------------------------
 # Tool 2: read_farm_grid
 # ---------------------------------------------------------------------------

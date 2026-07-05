@@ -33,7 +33,10 @@ app = get_fast_api_app(
     gemini_enterprise_app_name="croppulse-ai",
 )
 
-BUILD_ID = "build_20260705_0045"
+# Unregister default ADK /run route to allow our custom legacy_run route override
+app.router.routes = [r for r in app.router.routes if r.path != "/run"]
+
+BUILD_ID = "build_20260705_0055"
 
 
 @app.get("/version")
