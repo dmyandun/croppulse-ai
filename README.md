@@ -75,14 +75,28 @@ You can also use features from the [ADK](https://adk.dev/) CLI with `uv run adk`
 Edit your agent logic in `app/agent.py` and test with `agents-cli playground` - it auto-reloads on save.
 
 ## Deployment
+The agent has been successfully deployed to **Vertex AI Reasoning Engine** (Agent Engine) in Google Cloud.
 
-```bash
-gcloud config set project <your-project-id>
-agents-cli deploy
-```
+### Active Deployment Details
+* **GCP Project**: `primal-turbine-499903-m5`
+* **Region**: `us-central1`
+* **Resource Name**: `projects/459552199677/locations/us-central1/reasoningEngines/2728739920267968512`
 
-To add CI/CD and Terraform, run `agents-cli scaffold enhance`.
-To set up your production infrastructure, run `agents-cli infra cicd`.
+### Deployment Steps & Reproduction
+Vertex AI Reasoning Engine limits deployment payload sizes to **8MB**. Since the local virtual environment (`.venv`) is larger, it must be temporarily moved out of the project directory during packaging:
+
+1. **Move Virtual Environment Out**:
+   ```powershell
+   Move-Item -Path "croppulse-ai\.venv" -Destination "croppulse-ai_venv"
+   ```
+2. **Execute Deployment**:
+   ```powershell
+   croppulse-ai_venv\Scripts\python.exe -c "from google.adk.cli import main; main()" deploy agent_engine --region=us-central1 croppulse-ai
+   ```
+3. **Restore Virtual Environment**:
+   ```powershell
+   Move-Item -Path "croppulse-ai_venv" -Destination "croppulse-ai\.venv"
+   ```
 
 ## Observability
 

@@ -1,0 +1,17 @@
+# Exclude large directories and caches from gcloud uploads
+.gcloudignore
+.git
+.gitignore
+.venv/
+venv/
+.pytest_cache/
+.adk/
+artifacts/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.persist_vector_store
+.saved_chats
+.google-agents-cli/
+tools/a2a-inspector/
