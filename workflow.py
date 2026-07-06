@@ -96,7 +96,7 @@ def route_after_router(ctx: Context, node_input: str) -> str:
         ctx.state["intent"] = "GENERAL_QUESTION"
         ctx.state["confidence"] = 1.0
 
-    return router_text
+    return router_text or '{"intent": "GENERAL_QUESTION", "confidence": 1.0}'
 
 
 def dispatch_advisory_signals(ctx: Context, node_input: str) -> str:
