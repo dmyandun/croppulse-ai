@@ -457,18 +457,11 @@ function renderObGrid() {
     });
 }
 
-let pendingCropPhoto = null;
 
 function openObModal(id) {
     _selectedCell = id;
     document.getElementById('ob-crop-cell-label').textContent = id;
-    
-    // Reset details preview
-    pendingCropPhoto = null;
-    document.getElementById('ob-crop-photo-preview-wrap').style.display = 'none';
-    document.getElementById('ob-crop-photo-preview').src = '';
-    document.getElementById('ob-crop-photo-filename').textContent = '';
-    
+
     const cur = _gridState[id];
     const opts = document.getElementById('ob-crop-options');
     opts.innerHTML = '';
@@ -544,55 +537,7 @@ function initStep2() {
         document.getElementById('ob-crop-screen-details').style.display = 'none';
     });
 
-    // Phase 19: photo capture is only offered when the user picks
-    // "I don't know" as the growth cycle. Vision analysis then runs once
-    // during onboarding to identify the stage automatically.
-    const cycleSelect = document.getElementById('ob-crop-cycle');
-    const photoGroup = document.getElementById('ob-crop-photo-group');
-    const applyPhotoVisibility = () => {
-        if (!photoGroup || !cycleSelect) return;
-        photoGroup.style.display = cycleSelect.value === 'unknown' ? 'block' : 'none';
-    };
-    cycleSelect?.addEventListener('change', applyPhotoVisibility);
-    applyPhotoVisibility();
 
-    const photoBtn = document.getElementById('ob-crop-photo-btn');
-    const photoInput = document.getElementById('ob-crop-photo-input');
-    const photoPreviewWrap = document.getElementById('ob-crop-photo-preview-wrap');
-    const photoPreview = document.getElementById('ob-crop-photo-preview');
-    const photoFilename = document.getElementById('ob-crop-photo-filename');
-    const photoRemove = document.getElementById('ob-crop-photo-remove');
-
-    photoBtn?.addEventListener('click', (e) => {
-        e.preventDefault();
-        photoInput.click();
-    });
-
-    photoInput?.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                pendingCropPhoto = {
-                    dataUrl: evt.target.result,
-                    mimeType: file.type
-                };
-                photoPreview.src = evt.target.result;
-                photoFilename.textContent = file.name;
-                photoPreviewWrap.style.display = 'flex';
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    photoRemove?.addEventListener('click', (e) => {
-        e.preventDefault();
-        pendingCropPhoto = null;
-        photoInput.value = '';
-        photoPreview.src = '';
-        photoFilename.textContent = '';
-        photoPreviewWrap.style.display = 'none';
-    });
 
     let validationTimeout = null;
     const nameInput = document.getElementById('ob-custom-crop-name');

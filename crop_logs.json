@@ -525,6 +525,34 @@
       "diagnosis": "Your Corn in parcel P3 is currently dry and needs water urgently. The weather forecast indicates significant rain starting today and continuing throughout the week, with a thunderstorm expected on Jul",
       "recommendation": "1.  **For your Corn in P3:** Given the incoming heavy rains, I recommend monitoring the corn closely. While the plan suggests urgent irrigation for today (July 6th), if the forecasted \"Moderate rain s",
       "date": "2026-07-05 20:22"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 20:53"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "The corn in parcel P3 is currently suffering from water stress and needs immediate attention. Both your Cacao in P1 and Banana in P2 are reported as healthy. We are expecting significant rain this wee",
+      "recommendation": "1.  **Prioritize P3 (Corn):** Immediately irrigate the corn in parcel P3 today, July 6th, as planned. Given the upcoming heavy rains, ensure that you don't over-irrigate and that drainage is adequate ",
+      "date": "2026-07-05 20:54"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 20:55"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — FARM_AUDIT",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 20:55"
     }
   ]
 }
