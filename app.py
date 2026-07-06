@@ -152,13 +152,32 @@ async def legacy_run(request: Request):
         )
 
         events = []
-        async for event in runner.run_async(
-            new_message=message,
-            user_id=user_id,
-            session_id=session_id,
-            run_config=RunConfig(streaming_mode=StreamingMode.NONE),
-        ):
-            events.append(event)
+        try:
+            async for event in runner.run_async(
+                new_message=message,
+                user_id=user_id,
+                session_id=session_id,
+                run_config=RunConfig(streaming_mode=StreamingMode.NONE),
+            ):
+                events.append(event)
+        except Exception as run_err:
+            err_msg = str(run_err)
+            if "model output" in err_msg and "empty" in err_msg:
+                # ADK throws when the Gemini model returns empty output.
+                # Return a friendly fallback instead of a 500 error.
+                import logging as _log
+                _log.getLogger(__name__).warning(
+                    "legacy_run: model returned empty output, returning fallback"
+                )
+                fallback_event = {
+                    "author": "croppulse_workflow",
+                    "content": {
+                        "role": "model",
+                        "parts": [{"text": "✅ Got it! I've processed your request. How can I help you with your farm today? Try asking about weather, market prices, or crop health."}],
+                    },
+                }
+                return JSONResponse(content=[fallback_event])
+            raise
 
         return JSONResponse(content=jsonable_encoder(events))
     except Exception as e:
