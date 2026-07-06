@@ -368,7 +368,10 @@ async def security_input_validation(ctx, node_input: str) -> str:
     # Advisory Agent) can honour it verbatim instead of relying on the router's
     # JSON classification. Onboarding payloads ("Save my farm profile:") are
     # excluded — those are not conversational questions.
-    if not text.startswith("Save my farm profile:"):
+    if text.startswith("Save my farm profile:"):
+        ctx.state["is_profile_save"] = True
+    else:
+        ctx.state["is_profile_save"] = False
         ctx.state["user_message"] = text
 
     # Return the sanitized text.  The workflow graph will pass this to the

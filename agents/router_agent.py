@@ -26,6 +26,7 @@ router_agent = Agent(
         "- Their farm grid layout (which crop is in which parcel)\n"
         "- Their crop plan and pending actions\n\n"
         "Classification rules:\n"
+        "- If the message starts with 'Save my farm profile' -> PROFILE_SAVE\n"
         "- If the user asks about weather, rain, temperature, irrigation timing -> WEATHER_INQUIRY\n"
         "- If the user asks about prices, selling, market trends, best time to sell -> MARKET_INQUIRY\n"
         "- If the user asks about planting, scheduling, rotation, or what to plant -> CROP_PLANNING\n"
@@ -34,7 +35,7 @@ router_agent = Agent(
         "- If the user asks about fertilizers, nutrients, soil health -> NUTRIENT_MANAGEMENT\n"
         "- If the user asks about pests, diseases, or treatments -> PEST_MANAGEMENT\n"
         "- For all other questions -> GENERAL_QUESTION\n\n"
-        "Never refuse to classify; always emit a JSON.\n\n"
+        "CRITICAL: You MUST always respond with exactly one JSON object. Never return an empty response.\n\n"
         'Always respond with a JSON object: {"intent": "<INTENT>", "confidence": <0-1>}'
     ),
 )

@@ -106,6 +106,11 @@ def dispatch_advisory_signals(ctx: Context, node_input: str) -> str:
 
 def compile_advisory_input(ctx: Context, node_input: str) -> str:
     """Consolidate Weather, Markets, and Sheets inputs into a single prompt for Advisory."""
+    # Profile saves don't need the full advisory pipeline — return a simple
+    # confirmation prompt so the advisory agent always produces output.
+    if ctx.state.get("is_profile_save"):
+        return "The farmer just saved their farm profile. Respond with a brief, friendly confirmation like: '✅ Farm profile saved! I'm ready to help you with weather forecasts, market prices, and crop management advice. What would you like to know?'"
+
     # Stash incoming data into state keyed by signal type
     if node_input:
         try:
