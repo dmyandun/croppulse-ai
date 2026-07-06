@@ -1,4 +1,9 @@
 import os
+import sys
+
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 from google.adk import Agent
 from google.adk.models import Gemini
@@ -12,7 +17,7 @@ weather_mcp_path = os.path.join(
 )
 
 weather_tools = McpToolset(
-    connection_params=StdioServerParameters(command="python", args=[weather_mcp_path])
+    connection_params=StdioServerParameters(command=sys.executable, args=[weather_mcp_path])
 )
 
 weather_agent = Agent(

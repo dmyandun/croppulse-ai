@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from agent import root_agent
-
-load_dotenv()
 
 
 def test_agent_stream() -> None:

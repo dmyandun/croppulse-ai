@@ -14,6 +14,10 @@ This ensures visual findings are fused with weather, market, and farm grid data
 before final advice is composed, avoiding context pollution.
 """
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from google.adk import Agent, Context
 from google.adk.models import Gemini
 
@@ -28,7 +32,7 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
     artifacts = await ctx.list_artifacts()
     image_file = None
     for art in artifacts:
-        if art.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+        if any(art.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff")) or art.startswith("user_upload_"):
             image_file = art
             break
 
@@ -96,13 +100,16 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
 
     prompt = prompts.get(mode, prompts[0])
 
-    # Use google-genai Client to run the request
-    from google.genai import Client
-
-    client = Client()
+    # Use the authenticated api_client from the agent's model to support Vertex AI on Cloud Run
+    client = getattr(getattr(ctx, "agent", None), "model", None)
+    if client is not None and hasattr(client, "api_client"):
+        genai_client = client.api_client
+    else:
+        from google.genai import Client
+        genai_client = Client()
 
     try:
-        response = client.models.generate_content(
+        response = genai_client.models.generate_content(
             model="gemini-2.5-flash",
             contents=[
                 img_part,

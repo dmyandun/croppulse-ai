@@ -14,10 +14,10 @@ from google.adk.events import Event, EventActions
 from google.adk.runners import Runner
 from google.genai import types
 
+load_dotenv(override=True)
+
 from mcp_servers.market_mcp import COMMODITIES, _normalise_commodity
 from workflow import root_workflow
-
-load_dotenv()
 
 # Set agent directory as current directory
 AGENT_DIR = os.path.dirname(os.path.abspath(__file__))

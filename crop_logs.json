@@ -35,36 +35,6 @@
   },
   "CropPlan": [
     {
-      "date": "2026-07-10",
-      "parcel": "P1",
-      "activity": "Pruning cacao trees",
-      "status": "Pending"
-    },
-    {
-      "date": "2026-07-15",
-      "parcel": "P2",
-      "activity": "Inspect banana leaves for Sigatoka",
-      "status": "Pending"
-    },
-    {
-      "date": "2026-08-15",
-      "parcel": "P3",
-      "activity": "Harvest corn and clear land",
-      "status": "Pending"
-    },
-    {
-      "date": "2026-11-15",
-      "parcel": "P1",
-      "activity": "Main Cacao Harvest starts",
-      "status": "Pending"
-    },
-    {
-      "date": "2027-01-05",
-      "parcel": "P3",
-      "activity": "Plant corn for winter rainy cycle",
-      "status": "Pending"
-    },
-    {
       "date": "2026-07-06",
       "parcel": "P3",
       "activity": "Urgent irrigation of dry corn",
@@ -85,7 +55,19 @@
     {
       "date": "2026-07-10",
       "parcel": "P1",
+      "activity": "Pruning cacao trees",
+      "status": "Pending"
+    },
+    {
+      "date": "2026-07-10",
+      "parcel": "P1",
       "activity": "Pruning cacao trees for disease prevention",
+      "status": "Pending"
+    },
+    {
+      "date": "2026-07-15",
+      "parcel": "P2",
+      "activity": "Inspect banana leaves for Sigatoka",
       "status": "Pending"
     },
     {
@@ -97,13 +79,31 @@
     {
       "date": "2026-08-15",
       "parcel": "P3",
+      "activity": "Harvest corn and clear land",
+      "status": "Pending"
+    },
+    {
+      "date": "2026-08-15",
+      "parcel": "P3",
       "activity": "Harvest corn and clear dry crop residue",
       "status": "Pending"
     },
     {
       "date": "2026-11-15",
       "parcel": "P1",
+      "activity": "Main Cacao Harvest starts",
+      "status": "Pending"
+    },
+    {
+      "date": "2026-11-15",
+      "parcel": "P1",
       "activity": "Main Cacao Harvest begins",
+      "status": "Pending"
+    },
+    {
+      "date": "2027-01-05",
+      "parcel": "P3",
+      "activity": "Plant corn for winter rainy cycle",
       "status": "Pending"
     },
     {
@@ -149,6 +149,24 @@
       "health_status": "Nutrient Deficiency",
       "last_inspection": "2026-07-01",
       "pending_action": "Apply NPK 15-15-15"
+    },
+    {
+      "parcel": "P1",
+      "health_status": "Healthy",
+      "last_inspection": "2026-07-05",
+      "pending_action": "Pruning cacao trees"
+    },
+    {
+      "parcel": "P2",
+      "health_status": "Healthy",
+      "last_inspection": "2026-07-05",
+      "pending_action": "Inspect banana leaves for Sigatoka"
+    },
+    {
+      "parcel": "P3",
+      "health_status": "Water Stress",
+      "last_inspection": "2026-07-05",
+      "pending_action": "Urgent irrigation of dry corn"
     }
   ],
   "InteractionLog": [
@@ -291,6 +309,62 @@
       "diagnosis": "Based on your farm records, your corn crop in **Parcel 3** is suffering from water stress and is very dry. It needs immediate water to survive. Your cacao in **Parcel 1** and bananas in **Parcel 2** a",
       "recommendation": "Here is your step-by-step plan. Please follow these dates closely:",
       "date": "2026-07-05 01:04"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 7 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 18:56"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 5 — WATER_STRESS",
+      "diagnosis": "The Corn in parcel P3 is showing clear signs of water stress, which has been confidently identified by our Vision AI. This parcel is currently classified as \"Dry/Needs Water.\"",
+      "recommendation": "Given the immediate water stress in your Corn parcel (P3) and the upcoming heavy rains, it is crucial to perform the urgent irrigation as soon as possible, ideally today or early tomorrow, July 6th, a",
+      "date": "2026-07-05 18:57"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 7 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 18:57"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 7 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 18:57"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 7 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 19:02"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 7 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 19:02"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 7 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 19:03"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 7 — GENERAL_QUESTION",
+      "diagnosis": "The current weather is light drizzle, but your parcel P3, where you have Corn, is currently noted as \"Dry/Needs Water.\" Looking ahead, heavy rainfall is expected for the next seven days, with a signif",
+      "recommendation": "1.  **Immediate Irrigation for Corn (P3):** Despite the forecast for heavy rain, please prioritize urgent irrigation for your Corn in P3 today to alleviate the current dryness. Waiting for the heavy r",
+      "date": "2026-07-05 19:03"
     }
   ]
 }

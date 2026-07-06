@@ -5,6 +5,10 @@ import sys
 # a different app.py in the parent directory.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from app import app
 from workflow import root_workflow as root_agent
 

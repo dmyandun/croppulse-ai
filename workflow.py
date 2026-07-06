@@ -71,6 +71,10 @@ To ensure safety in agricultural recommendations and protect against standard LL
 
 import json
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from google.adk import Context, Workflow
 from google.adk.apps import App
 from google.adk.events import Event, EventActions

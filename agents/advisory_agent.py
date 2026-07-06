@@ -15,6 +15,10 @@ By taking in four independent signals, the Advisory Agent avoids myopic agronomy
 4.  **Farm Context:** Ensures advice respects neighboring crops and existing plans on the farm grid.
 """
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from google.adk import Agent
 from google.adk.models import Gemini
 

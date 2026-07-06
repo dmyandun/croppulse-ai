@@ -11,6 +11,9 @@ import json
 import random
 from datetime import date, timedelta
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("CropPulse Market MCP Server")

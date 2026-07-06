@@ -25,6 +25,9 @@ import os
 from datetime import datetime
 from typing import Any
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("CropPulse Google Sheets MCP Server")
@@ -253,6 +256,14 @@ def _clear_and_write(ws, headers: list[str], rows: list[list]) -> None:
         ws.append_rows(rows, value_input_option="USER_ENTERED")
 
 
+def _get_or_create_worksheet(ss, title: str, rows: int = 100, cols: int = 10):
+    """Get worksheet by title or create it if missing (e.g. on new sheets.new spreadsheets)."""
+    try:
+        return ss.worksheet(title)
+    except Exception:
+        return ss.add_worksheet(title=title, rows=rows, cols=cols)
+
+
 # ---------------------------------------------------------------------------
 # Tool 1: read_farm_profile
 # ---------------------------------------------------------------------------
@@ -273,7 +284,7 @@ def read_farm_profile(sheet_id: str = "") -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("Profile")
+        ws = _get_or_create_worksheet(ss, "Profile")
         records = _sheet_to_records(ws)
         # Profile tab: key-value pairs in columns A and B
         profile = {
@@ -316,7 +327,7 @@ def write_farm_profile(sheet_id: str, profile_json: str) -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("Profile")
+        ws = _get_or_create_worksheet(ss, "Profile")
         headers = ["key", "value"]
         rows = [[k, str(v)] for k, v in profile.items()]
         _clear_and_write(ws, headers, rows)
@@ -351,7 +362,7 @@ def read_farm_grid(sheet_id: str = "") -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("FarmGrid")
+        ws = _get_or_create_worksheet(ss, "FarmGrid")
         records = _sheet_to_records(ws)
         # Compute grid dimensions
         ids = [r.get("id", "") for r in records if r.get("id")]
@@ -384,7 +395,7 @@ def read_crop_plan(sheet_id: str = "") -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("CropPlan")
+        ws = _get_or_create_worksheet(ss, "CropPlan")
         return json.dumps(_sheet_to_records(ws), indent=2)
     except Exception as e:
         return json.dumps({"error": f"read_crop_plan failed: {e!s}"})
@@ -410,7 +421,7 @@ def read_indicators(sheet_id: str = "") -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("Indicators")
+        ws = _get_or_create_worksheet(ss, "Indicators")
         return json.dumps(_sheet_to_records(ws), indent=2)
     except Exception as e:
         return json.dumps({"error": f"read_indicators failed: {e!s}"})
@@ -464,7 +475,7 @@ def write_crop_plan(sheet_id: str, activities_json: str) -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("CropPlan")
+        ws = _get_or_create_worksheet(ss, "CropPlan")
         rows = [
             [
                 a.get("date", ""),
@@ -581,18 +592,39 @@ def write_indicators(sheet_id: str, indicators_json: str) -> str:
             }
         )
 
+    if not indicator_list and not crop_updates and not plan_updates:
+        return json.dumps(
+            {
+                "status": "ok",
+                "records_updated": 0,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("Indicators")
-        headers = ["parcel", "health_status", "last_inspection", "pending_action"]
-        rows = [[i.get(h, "") for h in headers] for i in indicator_list]
-        _clear_and_write(ws, headers, rows)
+
+        if indicator_list:
+            ws = _get_or_create_worksheet(ss, "Indicators")
+            existing_records = _sheet_to_records(ws)
+            for upd in indicator_list:
+                found = False
+                for rec in existing_records:
+                    if rec.get("parcel") == upd.get("parcel"):
+                        rec.update(upd)
+                        found = True
+                        break
+                if not found:
+                    existing_records.append(upd)
+            headers = ["parcel", "health_status", "last_inspection", "pending_action"]
+            rows = [[r.get(h, "") for h in headers] for r in existing_records]
+            _clear_and_write(ws, headers, rows)
 
         # Update FarmGrid worksheet if crop_updates present
         if crop_updates:
             try:
-                ws_grid = ss.worksheet("FarmGrid")
+                ws_grid = _get_or_create_worksheet(ss, "FarmGrid")
                 grid_records = _sheet_to_records(ws_grid)
                 headers_grid = ["id", "crop", "area_ha", "status", "cycle"]
                 for upd in crop_updates:
@@ -606,10 +638,32 @@ def write_indicators(sheet_id: str, indicators_json: str) -> str:
                 _clear_and_write(ws_grid, headers_grid, rows_grid)
             except Exception:
                 pass
+
+        # Update CropPlan worksheet if plan_updates present
+        if plan_updates:
+            try:
+                ws_plan = _get_or_create_worksheet(ss, "CropPlan")
+                plan_records = _sheet_to_records(ws_plan)
+                headers_plan = ["date", "parcel", "activity", "status"]
+                for act in plan_updates:
+                    dup = any(
+                        e.get("date") == act.get("date")
+                        and e.get("parcel") == act.get("parcel")
+                        and e.get("activity") == act.get("activity")
+                        for e in plan_records
+                    )
+                    if not dup:
+                        plan_records.append(act)
+                plan_records = sorted(plan_records, key=lambda x: x.get("date", ""))
+                rows_plan = [[r.get(h, "") for h in headers_plan] for r in plan_records]
+                _clear_and_write(ws_plan, headers_plan, rows_plan)
+            except Exception:
+                pass
+
         return json.dumps(
             {
                 "status": "ok",
-                "records_updated": len(rows),
+                "records_updated": len(indicator_list),
                 "timestamp": datetime.now().isoformat(),
             }
         )
@@ -653,7 +707,7 @@ def write_farm_grid(sheet_id: str, grid_json: str) -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("FarmGrid")
+        ws = _get_or_create_worksheet(ss, "FarmGrid")
         headers = ["id", "crop", "area_ha", "status", "cycle"]
         rows = [[p.get(h, "") for h in headers] for p in grid.get("parcels", [])]
         _clear_and_write(ws, headers, rows)
@@ -699,7 +753,7 @@ def append_interaction_log(sheet_id: str, log_entry_json: str) -> str:
     try:
         gc = _get_sheets_client()
         ss = gc.open_by_key(sheet_id)
-        ws = ss.worksheet("InteractionLog")
+        ws = _get_or_create_worksheet(ss, "InteractionLog")
         row = [
             entry.get("date", ""),
             entry.get("parcel", ""),

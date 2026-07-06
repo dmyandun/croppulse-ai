@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 
 from google.adk import Context
 from mcp import ClientSession, StdioServerParameters
@@ -19,6 +20,10 @@ SHEETS_MCP_PATH = os.path.join(
     "mcp_servers",
     "sheets_mcp.py",
 )
+
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 # Read from env or leave empty (triggers mock mode)
 _SHEET_ID = os.environ.get("FARM_SHEET_ID", "")
@@ -76,6 +81,8 @@ async def sheets_read_node(ctx: Context, node_input: str) -> str:
         try:
             parsed = json.loads(seeded_str)
             profile = parsed.get("profile", {}) or {}
+            if profile.get("sheet_id") or parsed.get("sheet_id"):
+                ctx.state["sheet_id"] = profile.get("sheet_id") or parsed.get("sheet_id")
             grid = parsed.get("farm_grid", {}) or {}
             parcels = grid.get("parcels", []) or []
             all_crops = [p["crop"] for p in parcels if p.get("crop")]
@@ -145,7 +152,7 @@ async def sheets_read_node(ctx: Context, node_input: str) -> str:
                 ],
             }
 
-            params = StdioServerParameters(command="python", args=[SHEETS_MCP_PATH])
+            params = StdioServerParameters(command=sys.executable, args=[SHEETS_MCP_PATH])
             async with stdio_client(params) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as session:
                     await session.initialize()
@@ -162,7 +169,7 @@ async def sheets_read_node(ctx: Context, node_input: str) -> str:
         except Exception as e:
             print(f"Error saving onboarding profile: {e}")
 
-    params = StdioServerParameters(command="python", args=[SHEETS_MCP_PATH])
+    params = StdioServerParameters(command=sys.executable, args=[SHEETS_MCP_PATH])
 
     try:
         async with stdio_client(params) as (read_stream, write_stream):
@@ -244,9 +251,9 @@ async def sheets_write_node(ctx: Context, node_input: str) -> str:
     sheet_id = ctx.state.get("sheet_id", _SHEET_ID)
 
     # ── 1. Extract [INDICATORS] JSON block ──────────────────────────────────
-    match = re.search(r"\[INDICATORS\]:\s*(\{.*?\})\s*$", advisory_text, re.DOTALL)
+    match = re.search(r"\[INDICATORS\]\s*:?\s*(\{[\s\S]+?\})(?:\s*```|\s*$)", advisory_text, re.DOTALL)
     if not match:
-        match = re.search(r"(\{[^{}]*parcel_health[^{}]*\})", advisory_text, re.DOTALL)
+        match = re.search(r"(\{[^{}]*\"parcel_health\"[^{}]*\})", advisory_text, re.DOTALL)
 
     indicators_json = "{}"
     if match:
@@ -276,7 +283,7 @@ async def sheets_write_node(ctx: Context, node_input: str) -> str:
         }
     )
 
-    params = StdioServerParameters(command="python", args=[SHEETS_MCP_PATH])
+    params = StdioServerParameters(command=sys.executable, args=[SHEETS_MCP_PATH])
 
     try:
         async with stdio_client(params) as (read_stream, write_stream):

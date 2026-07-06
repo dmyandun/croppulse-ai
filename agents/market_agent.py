@@ -1,4 +1,9 @@
 import os
+import sys
+
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 from google.adk import Agent
 from google.adk.models import Gemini
@@ -12,7 +17,7 @@ market_mcp_path = os.path.join(
 )
 
 market_tools = McpToolset(
-    connection_params=StdioServerParameters(command="python", args=[market_mcp_path])
+    connection_params=StdioServerParameters(command=sys.executable, args=[market_mcp_path])
 )
 
 market_agent = Agent(

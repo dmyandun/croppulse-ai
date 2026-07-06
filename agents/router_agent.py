@@ -13,6 +13,10 @@ if the workflow branches to the multimodal Vision Agent or bypasses it to gather
 ambient contextual signals (Weather/Market) directly.
 """
 
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from google.adk import Agent
 from google.adk.models import Gemini
 

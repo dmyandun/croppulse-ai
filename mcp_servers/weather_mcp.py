@@ -9,6 +9,9 @@ import json
 from datetime import datetime, timedelta
 
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("CropPulse Weather MCP Server")

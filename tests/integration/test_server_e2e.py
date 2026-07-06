@@ -37,7 +37,7 @@ from a2a.types import (
 from dotenv import load_dotenv
 from requests.exceptions import RequestException
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
