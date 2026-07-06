@@ -54,7 +54,7 @@ async def market_node(ctx: Context, node_input: str) -> str:
     - 30-day price trend and percentage change
     """
     # Preserve vision output when flowing from the vision agent
-    if node_input and "vision_output" not in ctx.state:
+    if ctx.state.get("has_image") and node_input and "vision_output" not in ctx.state:
         ctx.state["vision_output"] = node_input
 
     # Gather all crops on the farm (from Sheets context)

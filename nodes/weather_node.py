@@ -55,7 +55,7 @@ async def weather_node(ctx: Context, node_input: str) -> str:
     - Historical rainfall (last 14 days) for leaching risk assessment
     """
     # Preserve vision output when flowing from the vision agent
-    if node_input and "vision_output" not in ctx.state:
+    if ctx.state.get("has_image") and node_input and "vision_output" not in ctx.state:
         ctx.state["vision_output"] = node_input
 
     lat = float(ctx.state.get("latitude", -0.2687))

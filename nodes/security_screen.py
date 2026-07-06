@@ -453,6 +453,23 @@ async def security_input_validation(ctx, node_input: str) -> str:
         # stripping fails.  Log the error and continue.
         logger.warning("security_input: image processing error (non-fatal): %s", exc)
 
+    # Check ctx.user_content.parts for inline images if we didn't find any in artifacts
+    if not ctx.state.get("has_image", False):
+        try:
+            user_content = ctx.user_content
+            if user_content and user_content.parts:
+                for part in user_content.parts:
+                    if hasattr(part, "inline_data") and part.inline_data is not None:
+                        mime = (part.inline_data.mime_type or "").lower()
+                        if mime in ALLOWED_IMAGE_MIMES:
+                            # Verify size limit on inline data
+                            raw_bytes = part.inline_data.data or b""
+                            if len(raw_bytes) <= MAX_IMAGE_BYTES:
+                                ctx.state["has_image"] = True
+                                break
+        except Exception as exc:
+            logger.warning("security_input: inline image checking error (non-fatal): %s", exc)
+
     # Preserve the original user question so downstream nodes (specifically the
     # Advisory Agent) can honour it verbatim instead of relying on the router's
     # JSON classification. Onboarding payloads ("Save my farm profile:") are

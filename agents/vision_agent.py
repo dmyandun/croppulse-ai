@@ -29,14 +29,46 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
         mode: Mode number (1-7).
         crop_type: The type of crop in the selected parcel (e.g. Cacao, Banana, Corn).
     """
-    artifacts = await ctx.list_artifacts()
     image_file = None
-    for art in artifacts:
-        if any(art.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff")) or art.startswith("user_upload_"):
-            image_file = art
-            break
+    img_part = None
 
-    if not image_file:
+    # Try listing artifacts (if artifact service is initialized)
+    try:
+        artifacts = await ctx.list_artifacts()
+        for art in artifacts:
+            if any(art.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff")) or art.startswith("user_upload_"):
+                image_file = art
+                break
+        if image_file:
+            img_part = await ctx.load_artifact(image_file)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("analyze_crop_image: failed to load artifact: %s", e)
+
+    # Fallback to checking user_content parts directly if no artifact was loaded
+    if not img_part:
+        ALLOWED_IMAGE_MIMES = {
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+            "image/bmp",
+            "image/tiff",
+        }
+        try:
+            user_content = ctx.user_content
+            if user_content and user_content.parts:
+                for part in user_content.parts:
+                    if hasattr(part, "inline_data") and part.inline_data is not None:
+                        mime = (part.inline_data.mime_type or "").lower()
+                        if mime in ALLOWED_IMAGE_MIMES:
+                            img_part = part
+                            break
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("analyze_crop_image: failed to load from user_content: %s", e)
+
+    if not img_part:
         # No image uploaded — still emit a valid JSON so Advisory can respond
         # helpfully instead of refusing.
         return (
@@ -45,13 +77,20 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
             '"human_description": "No image was provided; unable to run vision analysis."}'
         )
 
-    img_part = await ctx.load_artifact(image_file)
-    if not img_part:
-        return (
-            '{"mode": 0, "identified_crop": "unknown", "growth_stage": "unknown", '
-            '"condition": "unknown", "confidence": 0.0, '
-            f'"human_description": "Failed to load image artifact {image_file!r}."}}'
-        )
+    # Strip EXIF metadata inline if not already done (e.g. under native execution)
+    if hasattr(img_part, "inline_data") and img_part.inline_data is not None:
+        mime = (img_part.inline_data.mime_type or "").lower()
+        raw_bytes = img_part.inline_data.data or b""
+        if mime in ("image/jpeg", "image/png") and raw_bytes:
+            try:
+                from nodes.security_screen import strip_exif
+                cleaned_bytes = strip_exif(raw_bytes, mime)
+                if len(cleaned_bytes) != len(raw_bytes):
+                    from google.genai import types
+                    img_part = types.Part.from_bytes(data=cleaned_bytes, mime_type=mime)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning("analyze_crop_image: inline EXIF stripping failed: %s", exc)
 
     prompts = {
         0: (
