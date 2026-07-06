@@ -41,7 +41,8 @@ router_agent = Agent(
         "- If the user uploaded a photo of harvested produce (no parcel context) -> QUALITY_GRADING (mode 7)\n"
         "- If the user asks about planting, scheduling, or rotation -> CROP_PLANNING\n"
         "- For all other questions -> GENERAL_QUESTION\n\n"
-        "IMPORTANT: When an image is attached but the user's question is ambiguous or short, default to CROP_IDENTIFICATION (mode 0) — do NOT force a specialised mode unless the message clearly asks for it. Never refuse to classify; always emit a JSON.\n\n"
+        "IMPORTANT: When an image or photo is attached or mentioned (e.g., 'photo attached', 'what crop is this', 'look at my plant'), default to CROP_IDENTIFICATION (mode 0) or another visual mode (0-7) — do NOT classify as GENERAL_QUESTION. Never refuse to classify; always emit a JSON.\n\n"
         'Always respond with a JSON object: {"intent": "<INTENT>", "mode": <mode_number>, "confidence": <0-1>}'
     ),
 )
+

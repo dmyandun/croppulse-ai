@@ -944,15 +944,11 @@ function launchApp() {
 
     // Async: fetch top price for main crop
     const mainCrop = (APP.profile.parcels||[])[0]?.crop || 'cacao';
-    agentRun(`Get market price for ${mainCrop}.`).then(out=>{
-        try {
-            const d=JSON.parse(out);
-            if(d.current_price_usd) {
-                APP.prices[mainCrop]={ price:d.current_price_usd, unit:d.unit, change:d.daily_change_pct, trend:d.trend_direction };
-                updatePriceIndicator(mainCrop);
-            }
-        } catch(e) {
-            // non-JSON response, show placeholder
+    fetch(`/api/market/price?crop=${encodeURIComponent(mainCrop)}`).then(res=>res.json()).then(d=>{
+        if(d && d.current_price_usd) {
+            APP.prices[mainCrop]={ price:d.current_price_usd, unit:d.unit, change:d.daily_change_pct, trend:d.trend_direction };
+            updatePriceIndicator(mainCrop);
+        } else {
             document.getElementById('ind-price-sub').textContent='Data unavailable';
         }
     }).catch(()=>{ document.getElementById('ind-price-sub').textContent='Offline'; });
@@ -1077,14 +1073,11 @@ function renderIndicators_parcel(parcelId) {
     } else if(par.crop) {
         document.getElementById('ind-price-val').textContent='—';
         document.getElementById('ind-price-sub').textContent='Fetching…';
-        agentRun(`Get market price for ${par.crop}.`).then(out=>{
-            try {
-                const d=JSON.parse(out);
-                if(d.current_price_usd) {
-                    APP.prices[par.crop]={ price:d.current_price_usd, unit:d.unit, change:d.daily_change_pct, trend:d.trend_direction };
-                    if(APP.selectedParcel?.id===parcelId) updatePriceIndicator(par.crop);
-                }
-            } catch {}
+        fetch(`/api/market/price?crop=${encodeURIComponent(par.crop)}`).then(res=>res.json()).then(d=>{
+            if(d && d.current_price_usd) {
+                APP.prices[par.crop]={ price:d.current_price_usd, unit:d.unit, change:d.daily_change_pct, trend:d.trend_direction };
+                if(APP.selectedParcel?.id===parcelId) updatePriceIndicator(par.crop);
+            }
         }).catch(()=>{});
     }
 

@@ -16,7 +16,8 @@ from google.genai import types
 
 load_dotenv(override=True)
 
-from mcp_servers.market_mcp import COMMODITIES, _normalise_commodity
+import json
+from mcp_servers.market_mcp import COMMODITIES, _normalise_commodity, get_current_price
 from workflow import root_workflow
 
 # Set agent directory as current directory
@@ -76,6 +77,15 @@ async def validate_crop(name: str):
     if matches:
         return {"status": "suggest", "matches": matches}
     return {"status": "none"}
+
+
+@app.get("/api/market/price")
+async def api_market_price(crop: str = "cacao"):
+    res_str = get_current_price(crop)
+    try:
+        return JSONResponse(content=json.loads(res_str))
+    except Exception:
+        return JSONResponse(content={"error": "Failed to fetch price"}, status_code=500)
 
 
 @app.post("/feedback")

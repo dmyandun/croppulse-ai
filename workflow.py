@@ -127,7 +127,9 @@ def route_after_router(ctx: Context, node_input: str) -> Event:
         "QUALITY_GRADING",
     }
 
-    if has_image and intent in visual_intents:
+    if has_image:
+        if intent not in visual_intents:
+            mode = 0
         # Prompt visual agent with mode and crop context
         prompt = f"Selected Mode: Mode {mode}\nSelected Crop: {selected_crop}\n\nRun visual analysis on crop."
         return Event(output=prompt, actions=EventActions(route="vision"))
