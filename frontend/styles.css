@@ -498,6 +498,49 @@ img{max-width:100%;display:block}
 }
 .followup-pill:hover{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--accent)}
 
+/* ── Quick Crop Planning Actions ─────────────────────────────── */
+.chat-quick-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    overflow-x: auto;
+    background: rgba(15, 23, 42, 0.75);
+    border-top: 1px solid var(--border);
+    scrollbar-width: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.chat-quick-actions::-webkit-scrollbar { display: none; }
+.quick-plan-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--tx1);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all var(--t);
+    flex-shrink: 0;
+}
+.quick-plan-btn:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: #10b981;
+    color: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+.parcel-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.9) !important;
+    color: #ffffff !important;
+    border-color: #ef4444 !important;
+    transform: scale(1.1);
+}
+
 /* ── Chat Bottom Bar ─────────────────────────────────────────── */
 .chat-bottom-bar{
     flex-shrink:0;

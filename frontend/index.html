@@ -325,7 +325,7 @@
             <section class="farm-section">
                 <div class="section-header">
                     <h2 class="section-title">Farm Parcels</h2>
-                    <span class="section-hint">Tap to inspect · Pencil to edit</span>
+                    <span class="section-hint">Tap to inspect · Minus to delete</span>
                 </div>
                 <div id="farm-grid-view" class="farm-grid-view" role="grid" aria-label="Farm parcels grid"></div>
             </section>
@@ -378,6 +378,13 @@
                 </div>
 
             </div><!-- /chat-messages -->
+
+            <!-- Quick Crop Planning Actions -->
+            <div class="chat-quick-actions" id="chat-quick-actions">
+                <button class="quick-plan-btn" data-prompt="Generate a comprehensive crop planning schedule and add all recommended activities to my calendar considering weather, market, and soil signals."><i class="fa-solid fa-calendar-plus" style="color:#10b981"></i> Full Crop Plan</button>
+                <button class="quick-plan-btn" data-prompt="Plan irrigation, fertilization, and maintenance activities for my parcels this month and add them to the calendar based on agent signals."><i class="fa-solid fa-droplet" style="color:#38bdf8"></i> Maintenance Plan</button>
+                <button class="quick-plan-btn" data-prompt="Create a harvest and disease prevention schedule for all my crops and update my calendar."><i class="fa-solid fa-bug" style="color:#f59e0b"></i> Harvest & Pest Plan</button>
+            </div>
 
             <!-- Bottom Input Bar -->
             <div class="chat-bottom-bar">

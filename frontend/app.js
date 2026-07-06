@@ -1000,31 +1000,54 @@ function renderFarmGrid() {
             el.innerHTML = `<span class="fp-id">${id}</span>`;
         }
 
-        // Phase 19: corner pencil affordance. Explicit z-index and pointer-events
-        // to ensure the click reaches the button rather than the parcel below.
-        const pencil = document.createElement('button');
-        pencil.type = 'button';
-        pencil.className = 'parcel-edit-btn';
-        pencil.setAttribute('aria-label', `Edit parcel ${id}`);
-        pencil.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#e2e8f0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;padding:0;z-index:5;pointer-events:auto;';
-        pencil.innerHTML = '<i class="fa-solid fa-pen" style="pointer-events:none"></i>';
-        pencil.addEventListener('click', (e) => {
+        // Corner minus (delete) affordance with confirmation prompt
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'parcel-delete-btn';
+        delBtn.setAttribute('aria-label', `Delete parcel ${id}`);
+        delBtn.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(15,23,42,0.85);border:1px solid rgba(239,68,68,0.4);border-radius:4px;color:#ef4444;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;padding:0;z-index:5;pointer-events:auto;transition:all 0.2s;';
+        delBtn.innerHTML = '<i class="fa-solid fa-minus" style="pointer-events:none"></i>';
+        delBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            try { openEditParcelModal(id); }
-            catch (err) { console.error('openEditParcelModal failed:', err); }
+            if (confirm(`¿Estás seguro de que deseas eliminar la parcela ${id} y toda su información? / Are you sure you want to delete parcel ${id}?`)) {
+                APP.profile.grid = APP.profile.grid || {};
+                APP.profile.grid[id] = null;
+                APP.profile.parcels = (APP.profile.parcels || []).filter(p => p.id !== id);
+                if (APP.selectedParcel?.id === id) {
+                    deselectParcel();
+                }
+                saveProfile(APP.profile);
+                renderFarmGrid();
+                persistProfileUpdate();
+            }
         });
-        el.appendChild(pencil);
+        el.appendChild(delBtn);
 
         el.addEventListener('click', () => selectParcel(id, cropId));
         container.appendChild(el);
     });
 
-    // Compute the next slot for the "+" cell, respecting the user's column count.
-    const n = parcels.length;
-    const nextRow = Math.floor(n / cols);
-    const nextCol = n % cols;
-    const nextId = cellId(nextRow, nextCol);
+    // Compute the next available slot for the "+" cell
+    const existingIds = new Set(parcels.map(p => p.id));
+    let nextId = null;
+    let nextRow = 0;
+    for (let r = 0; r < 50; r++) {
+        for (let c = 0; c < cols; c++) {
+            const cid = cellId(r, c);
+            if (!existingIds.has(cid)) {
+                nextId = cid;
+                nextRow = r;
+                break;
+            }
+        }
+        if (nextId) break;
+    }
+    if (!nextId) {
+        const n = parcels.length;
+        nextRow = Math.floor(n / cols);
+        nextId = cellId(nextRow, n % cols);
+    }
     const addEl = document.createElement('div');
     addEl.className = 'farm-parcel add-cell';
     addEl.dataset.parcel = nextId;
@@ -1312,10 +1335,12 @@ function renderSuggestions() {
             <span class="sug-pill pill-${s.category}">${s.category}</span>
         `;
         card.addEventListener('click',()=>{
+            if (document.getElementById('typing-indicator')) return;
             const inp=document.getElementById('chat-input');
             inp.value=s.text;
             inp.focus();
             document.getElementById('chat-send-btn').disabled=false;
+            sendMessage();
         });
         container.appendChild(card);
     });
@@ -1329,6 +1354,15 @@ function buildSuggestions() {
     const crops=[...new Set(parcels.map(p=>p.crop).filter(c=>c&&c!=='empty'))];
     const mainCrop=crops[0]||'cacao';
     const mainLabel=cropOf(mainCrop)?.label||mainCrop;
+
+    // 1. Crop Planning (drives activities and calendar updates across all signals)
+    sugs.push({ icon:'<i class="fa-solid fa-calendar-plus" style="color:#10b981"></i>',
+        iconBg:'rgba(16,185,129,.12)', category:'plan',
+        text:"Generate a comprehensive crop planning schedule and add all recommended activities to my calendar considering weather, market, and soil signals." });
+
+    sugs.push({ icon:'<i class="fa-solid fa-droplet" style="color:#38bdf8"></i>',
+        iconBg:'rgba(56,189,248,.12)', category:'plan',
+        text:"Plan irrigation, fertilization, and maintenance activities for my parcels this month and add them to the calendar based on agent signals." });
 
     // 1. Alert-driven (if any pending actions)
     if(alerted.length) {
@@ -1687,6 +1721,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if(e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
     sendBtn?.addEventListener('click',sendMessage);
+
+    // ── Quick Crop Planning Actions ──────────────────────────
+    document.querySelectorAll('.quick-plan-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (document.getElementById('typing-indicator')) return;
+            const prompt = btn.getAttribute('data-prompt');
+            if (!prompt || !chatInput || !sendBtn) return;
+            chatInput.value = prompt;
+            sendBtn.disabled = false;
+            sendMessage();
+        });
+    });
 
 
     // ── Database Config Modal ───────────────────────────────
