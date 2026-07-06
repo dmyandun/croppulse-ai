@@ -678,92 +678,9 @@ async function finishOnboarding() {
     try { await persistFarm(APP.profile); } catch (e) { console.warn('Backend save skipped:', e.message); }
     document.getElementById('ob-saving-msg').style.display = 'none';
     launchApp();
-    // Phase 18: kick off vision analysis for any parcel photo captured during
-    // onboarding. Runs in the background — the user lands on the dashboard
-    // immediately and results appear as chat messages when the AI tab opens.
-    analyzeOnboardingPhotos().catch(err => console.warn('Photo analysis skipped:', err));
 }
 
-async function analyzeOnboardingPhotos() {
-    // Phase 19: only parcels the farmer marked as "I don't know" (cycle=unknown)
-    // AND that carry a photo get sent through vision. This runs exactly once,
-    // at the end of onboarding — never on grid clicks or re-renders.
-    const targets = (APP.profile?.parcels || []).filter(p => p && p.photo && p.cycle === 'unknown');
-    if (!targets.length) return;
-    APP.chatSeed = APP.chatSeed || [];
-    let profileDirty = false;
-    for (const p of targets) {
-        try {
-            const mimeMatch = /^data:([^;]+);base64,/.exec(p.photo);
-            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-            const data = p.photo.split(',')[1];
-            if (!data) continue;
-            const prompt = `Identify the crop and its growth stage from the attached photo. Parcel ${p.id} was declared as "${p.crop || 'unknown'}" with an unknown growth stage. Return the identified crop and one of {seedling, vegetative, flowering_fruiting, harvesting}. Emit an [INDICATORS] block with a "crop_updates" entry so the dashboard is corrected.`;
-            const res = await fetch('/run', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: AbortSignal.timeout(60000),
-                body: JSON.stringify({
-                    user_id: APP.userId,
-                    session_id: APP.sessionId,
-                    state_delta: buildStateDelta(APP.profile),
-                    new_message: {
-                        parts: [
-                            { text: prompt },
-                            { inline_data: { mime_type: mime, data } },
-                        ],
-                    },
-                }),
-            });
-            if (!res.ok) continue;
-            const events = await res.json();
-            const text = extractFinalOutput(events);
 
-            // Parse an [INDICATORS] block, if present, and back-fill the parcel.
-            const indMatch = text.match(/\[INDICATORS\]\s*:?\s*(\{[\s\S]+?\})/);
-            if (indMatch) {
-                try {
-                    const inds = JSON.parse(indMatch[1]);
-                    if (Array.isArray(inds.crop_updates)) {
-                        inds.crop_updates.forEach(u => {
-                            if (u.parcel !== p.id) return;
-                            const pIdx = APP.profile.parcels.findIndex(pp => pp.id === u.parcel);
-                            if (pIdx >= 0) {
-                                if (u.crop) APP.profile.parcels[pIdx].crop = u.crop;
-                                if (u.cycle) APP.profile.parcels[pIdx].cycle = u.cycle;
-                            }
-                            APP.profile.grid = APP.profile.grid || {};
-                            const cur = APP.profile.grid[u.parcel];
-                            if (typeof cur === 'object' && cur) {
-                                if (u.crop) cur.crop = u.crop;
-                                if (u.cycle) cur.cycle = u.cycle;
-                            } else {
-                                APP.profile.grid[u.parcel] = { crop: u.crop || (cur || 'unknown'), cycle: u.cycle || 'vegetative', photo: p.photo };
-                            }
-                            profileDirty = true;
-                        });
-                    }
-                } catch { /* ignore malformed indicators */ }
-            }
-
-            // Strip the [INDICATORS] block from the visible chat message.
-            const visible = text.replace(/\[INDICATORS\][\s\S]*$/, '').trim() || text;
-            const msg = `📸 Parcel ${p.id} — vision analysis:\n\n${visible}`;
-            APP.chatSeed.push({ role: 'agent', text: msg });
-            if (document.getElementById('tab-ai')?.classList.contains('active')) {
-                addMessage('agent', msg);
-            }
-        } catch (e) {
-            console.warn(`Photo analysis for ${p.id} failed:`, e.message);
-        }
-    }
-
-    if (profileDirty) {
-        saveProfile(APP.profile);
-        try { renderFarmGrid(); } catch {}
-        try { await persistProfileUpdate(); } catch {}
-    }
-}
 
 // Phase 17: build a state envelope that seeds the workflow session with the
 // user's real farm profile. Sent alongside every /run POST so the backend

@@ -101,7 +101,7 @@ def route_after_router(ctx: Context, node_input: str) -> str:
 
 def dispatch_advisory_signals(ctx: Context, node_input: str) -> str:
     """Passthrough that feeds the router output into the weather → market → compile chain."""
-    return node_input or ""
+    return node_input or "GENERAL_QUESTION"
 
 
 def compile_advisory_input(ctx: Context, node_input: str) -> str:
