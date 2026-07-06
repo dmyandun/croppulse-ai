@@ -771,8 +771,9 @@ function launchApp() {
         }
     }
 
-    // Seed crop plan from profile if backend offline
-    APP.cropPlan = buildCropPlan(APP.profile);
+    // Calendar starts empty — activities are only added when the user
+    // explicitly requests a crop plan via the AI assistant.
+    APP.cropPlan = [];
 
     // Build synthetic indicators from profile
     APP.indicators = (APP.profile.parcels||[]).map(p=>({
@@ -1355,14 +1356,6 @@ function buildSuggestions() {
     const mainCrop=crops[0]||'cacao';
     const mainLabel=cropOf(mainCrop)?.label||mainCrop;
 
-    // 1. Crop Planning (drives activities and calendar updates across all signals)
-    sugs.push({ icon:'<i class="fa-solid fa-calendar-plus" style="color:#10b981"></i>',
-        iconBg:'rgba(16,185,129,.12)', category:'plan',
-        text:"Generate a comprehensive crop planning schedule and add all recommended activities to my calendar considering weather, market, and soil signals." });
-
-    sugs.push({ icon:'<i class="fa-solid fa-droplet" style="color:#38bdf8"></i>',
-        iconBg:'rgba(56,189,248,.12)', category:'plan',
-        text:"Plan irrigation, fertilization, and maintenance activities for my parcels this month and add them to the calendar based on agent signals." });
 
     // 1. Alert-driven (if any pending actions)
     if(alerted.length) {
@@ -1467,6 +1460,105 @@ function removeTypingIndicator() {
     document.getElementById('typing-indicator')?.remove();
 }
 
+// Parse AI response to detect crop plan activities. Looks for structured
+// activity listings (dates, parcel references, activity names) and builds
+// calendar-compatible objects. Only triggered when the user's question was
+// about planning/scheduling.
+function parsePlanActivities(response, question) {
+    const qLower = question.toLowerCase();
+    const isPlanRequest = qLower.includes('plan') || qLower.includes('schedule') ||
+        qLower.includes('calendar') || qLower.includes('activit') ||
+        qLower.includes('irrigation') || qLower.includes('fertiliz') ||
+        qLower.includes('maintenance') || qLower.includes('harvest');
+    if (!isPlanRequest) return [];
+
+    const activities = [];
+    const parcels = APP.profile?.parcels || [];
+    const today = new Date();
+
+    // Try to find date + activity patterns in the response
+    // Pattern: dates like "July 10", "2026-07-10", "Week 1", etc.
+    const lines = response.split('\n');
+    const datePatterns = [
+        /(\d{4}-\d{2}-\d{2})/,  // ISO dates
+        /(\w+ \d{1,2}(?:,?\s*\d{4})?)/,  // "July 10" or "July 10, 2026"
+    ];
+
+    // Activity keywords
+    const activityKeywords = ['prun', 'fertil', 'irrigat', 'harvest', 'spray', 'weed',
+        'inspect', 'monitor', 'plant', 'sow', 'mulch', 'pest', 'disease', 'apply',
+        'water', 'compost', 'soil', 'drain', 'de-leaf', 'thin'];
+
+    let foundActivities = [];
+    lines.forEach(line => {
+        const lower = line.toLowerCase();
+        const hasActivity = activityKeywords.some(k => lower.includes(k));
+        if (!hasActivity) return;
+
+        // Extract activity name — use the first meaningful phrase
+        let activity = line.replace(/^[\s\-\*\d\.\)]+/, '').trim();
+        // Trim markdown bold
+        activity = activity.replace(/\*\*/g, '').trim();
+        if (activity.length < 5 || activity.length > 100) return;
+
+        // Try to extract a date
+        let actDate = null;
+        for (const pat of datePatterns) {
+            const m = line.match(pat);
+            if (m) {
+                const parsed = new Date(m[1]);
+                if (!isNaN(parsed.getTime())) {
+                    actDate = parsed;
+                    break;
+                }
+            }
+        }
+
+        // If no date found, spread activities over the next weeks
+        if (!actDate) {
+            actDate = new Date(today);
+            actDate.setDate(actDate.getDate() + foundActivities.length * 5 + 2);
+        }
+
+        // Try to identify which parcel
+        let parcelId = parcels[0]?.id || 'A1';
+        parcels.forEach(p => {
+            if (line.includes(p.id)) parcelId = p.id;
+        });
+
+        foundActivities.push({
+            date: actDate.toISOString().split('T')[0],
+            parcel: parcelId,
+            crop: parcels.find(p => p.id === parcelId)?.crop || 'cacao',
+            activity: activity.substring(0, 60),
+            status: 'Scheduled',
+        });
+    });
+
+    // If we detected plan-related content but no structured activities,
+    // build some from the parcels and response keywords
+    if (foundActivities.length === 0 && isPlanRequest && response.length > 200) {
+        const commonActs = ['Soil preparation', 'Fertilization', 'Irrigation check',
+            'Pest monitoring', 'Pruning', 'Harvest assessment'];
+        parcels.forEach(p => {
+            if (!p.crop || p.crop === 'empty') return;
+            commonActs.slice(0, 3).forEach((act, i) => {
+                const d = new Date(today);
+                d.setDate(d.getDate() + i * 7 + 3);
+                foundActivities.push({
+                    date: d.toISOString().split('T')[0],
+                    parcel: p.id,
+                    crop: p.crop,
+                    activity: act,
+                    status: 'Scheduled',
+                });
+            });
+        });
+    }
+
+    return foundActivities;
+}
+
 async function sendMessage() {
     const input=document.getElementById('chat-input');
     const sendBtn=document.getElementById('chat-send-btn');
@@ -1527,6 +1619,40 @@ async function sendMessage() {
                 }
                 if(inds.price&&inds.crop) { APP.prices[inds.crop]=inds; updatePriceIndicator(inds.crop); }
             } catch {}
+        }
+
+        // Detect crop plan activities in the response and offer to save
+        const planActivities = parsePlanActivities(response, text);
+        if (planActivities.length > 0) {
+            const confirmRow = document.createElement('div');
+            confirmRow.className = 'chat-msg agent';
+            confirmRow.style.paddingLeft = '42px';
+            const confirmBox = document.createElement('div');
+            confirmBox.className = 'cal-save-confirm';
+            confirmBox.innerHTML = `<span><i class="fa-solid fa-calendar-check" style="color:#10b981;margin-right:0.4rem"></i>Save ${planActivities.length} activities to your calendar?</span>`;
+            const yesBtn = document.createElement('button');
+            yesBtn.className = 'cal-save-btn';
+            yesBtn.textContent = 'Yes, save';
+            yesBtn.addEventListener('click', () => {
+                planActivities.forEach(a => APP.cropPlan.push(a));
+                APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
+                renderCalendar();
+                renderEventsList();
+                confirmBox.innerHTML = '<span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>Activities saved to your calendar!</span>';
+                // Switch to farm tab so user sees the calendar
+                setTimeout(() => switchTab('farm'), 1500);
+            });
+            const noBtn = document.createElement('button');
+            noBtn.className = 'cal-save-btn decline';
+            noBtn.textContent = 'No thanks';
+            noBtn.addEventListener('click', () => {
+                confirmBox.innerHTML = '<span style="color:var(--tx2)"><i class="fa-solid fa-xmark" style="margin-right:0.4rem"></i>Activities not saved.</span>';
+            });
+            confirmBox.appendChild(yesBtn);
+            confirmBox.appendChild(noBtn);
+            confirmRow.appendChild(confirmBox);
+            document.getElementById('chat-messages').appendChild(confirmRow);
+            document.getElementById('chat-messages').scrollTop = 999999;
         }
 
         // Follow-up pills
@@ -1722,15 +1848,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     sendBtn?.addEventListener('click',sendMessage);
 
-    // ── Quick Crop Planning Actions ──────────────────────────
-    document.querySelectorAll('.quick-plan-btn').forEach(btn => {
+    // ── Calendar Plan Buttons (in dashboard header) ──────────
+    document.querySelectorAll('.cal-plan-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             if (document.getElementById('typing-indicator')) return;
             const prompt = btn.getAttribute('data-prompt');
-            if (!prompt || !chatInput || !sendBtn) return;
-            chatInput.value = prompt;
-            sendBtn.disabled = false;
-            sendMessage();
+            if (!prompt) return;
+            // Switch to AI tab
+            switchTab('ai');
+            // Short delay to let the tab render, then populate and send
+            setTimeout(() => {
+                const inp = document.getElementById('chat-input');
+                const sb = document.getElementById('chat-send-btn');
+                if (!inp || !sb) return;
+                inp.value = prompt;
+                sb.disabled = false;
+                sendMessage();
+            }, 150);
         });
     });
 

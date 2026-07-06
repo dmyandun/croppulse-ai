@@ -7,7 +7,7 @@
     <meta name="description" content="CropPulse AI gives smallholder farmers cross-signal intelligence: crop vision, weather, and market data fused into actionable recommendations.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
 
@@ -334,6 +334,19 @@
             <section class="farm-section">
                 <div class="section-header">
                     <h2 class="section-title">Crop Planner</h2>
+                    <div class="cal-plan-actions">
+                        <button class="cal-plan-btn" id="cal-plan-full" data-prompt="Generate a comprehensive crop planning schedule and add all recommended activities to my calendar considering weather, market, and soil signals.">
+                            <i class="fa-solid fa-calendar-plus"></i> Generate Plan
+                        </button>
+                        <button class="cal-plan-btn" id="cal-plan-maint" data-prompt="Plan irrigation, fertilization, and maintenance activities for my parcels this month and add them to the calendar based on agent signals.">
+                            <i class="fa-solid fa-droplet"></i> Maintenance
+                        </button>
+                        <button class="cal-plan-btn" id="cal-plan-harvest" data-prompt="Create a harvest and disease prevention schedule for all my crops and update my calendar.">
+                            <i class="fa-solid fa-bug"></i> Harvest & Pest
+                        </button>
+                    </div>
+                </div>
+                <div class="section-header" style="padding-top:0;">
                     <div class="calendar-nav-group">
                         <button class="cal-nav-btn" id="cal-prev" aria-label="Previous month">
                             <i class="fa-solid fa-chevron-left"></i>
@@ -379,13 +392,6 @@
 
             </div><!-- /chat-messages -->
 
-            <!-- Quick Crop Planning Actions -->
-            <div class="chat-quick-actions" id="chat-quick-actions">
-                <button class="quick-plan-btn" data-prompt="Generate a comprehensive crop planning schedule and add all recommended activities to my calendar considering weather, market, and soil signals."><i class="fa-solid fa-calendar-plus" style="color:#10b981"></i> Full Crop Plan</button>
-                <button class="quick-plan-btn" data-prompt="Plan irrigation, fertilization, and maintenance activities for my parcels this month and add them to the calendar based on agent signals."><i class="fa-solid fa-droplet" style="color:#38bdf8"></i> Maintenance Plan</button>
-                <button class="quick-plan-btn" data-prompt="Create a harvest and disease prevention schedule for all my crops and update my calendar."><i class="fa-solid fa-bug" style="color:#f59e0b"></i> Harvest & Pest Plan</button>
-            </div>
-
             <!-- Bottom Input Bar -->
             <div class="chat-bottom-bar">
 
@@ -423,6 +429,6 @@
     </div>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>
