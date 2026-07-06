@@ -607,7 +607,6 @@ function initStep2() {
         const record = {
             crop: (currentValidatedName || name).toLowerCase(),
             cycle: cycleEl ? cycleEl.value : 'vegetative',
-            photo: pendingCropPhoto ? pendingCropPhoto.dataUrl : null,
         };
 
         if (_editingProfileParcel) {
@@ -620,7 +619,6 @@ function initStep2() {
                 id: _selectedCell,
                 crop: record.crop,
                 cycle: record.cycle,
-                photo: record.photo,
                 area_ha: pIdx >= 0 ? (APP.profile.parcels[pIdx].area_ha || 1.0) : 1.0,
                 status: pIdx >= 0 ? (APP.profile.parcels[pIdx].status || 'Healthy') : 'Healthy',
             };
@@ -661,12 +659,10 @@ async function finishOnboarding() {
         .map(([id, c]) => {
             const cropVal = (typeof c === 'object') ? c.crop : c;
             const cycleVal = (typeof c === 'object') ? c.cycle : 'vegetative';
-            const photoVal = (typeof c === 'object') ? c.photo : null;
             return {
                 id,
                 crop: cropVal,
                 cycle: cycleVal,
-                photo: photoVal,
                 area_ha: 1.0,
                 status: 'Healthy'
             };
@@ -695,7 +691,6 @@ function buildStateDelta(profile) {
         cycle: p.cycle || 'vegetative',
         area_ha: p.area_ha != null ? p.area_ha : 1.0,
         status: p.status || 'Healthy',
-        photo_data_url: p.photo || null,
     }));
     const crops = [...new Set(parcels.map(p => p.crop).filter(Boolean))];
     const country = profile.country_label || profile.country || 'Ecuador';
@@ -1057,18 +1052,7 @@ function openEditParcelModal(id) {
     const cur = (typeof cell === 'object' && cell) ? cell : (cell ? { crop:cell, cycle:'vegetative', photo:null } : null);
 
     document.getElementById('ob-crop-cell-label').textContent = id;
-    pendingCropPhoto = cur?.photo ? { dataUrl: cur.photo, mimeType: 'image/jpeg' } : null;
 
-    const photoWrap = document.getElementById('ob-crop-photo-preview-wrap');
-    const photoImg = document.getElementById('ob-crop-photo-preview');
-    const photoName = document.getElementById('ob-crop-photo-filename');
-    if (cur?.photo && photoWrap && photoImg && photoName) {
-        photoImg.src = cur.photo;
-        photoName.textContent = 'existing photo';
-        photoWrap.style.display = 'flex';
-    } else if (photoWrap) {
-        photoWrap.style.display = 'none';
-    }
 
     // Populate crop options and open selection screen
     const opts = document.getElementById('ob-crop-options');
