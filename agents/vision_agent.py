@@ -71,11 +71,13 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
     if not img_part:
         # No image uploaded — still emit a valid JSON so Advisory can respond
         # helpfully instead of refusing.
-        return (
+        fallback = (
             '{"mode": 0, "identified_crop": "unknown", "growth_stage": "unknown", '
             '"condition": "unknown", "confidence": 0.0, '
             '"human_description": "No image was provided; unable to run vision analysis."}'
         )
+        ctx.state["vision_output"] = fallback
+        return fallback
 
     # Strip EXIF metadata inline if not already done (e.g. under native execution)
     if hasattr(img_part, "inline_data") and img_part.inline_data is not None:
@@ -173,17 +175,23 @@ async def analyze_crop_image(ctx: Context, mode: int, crop_type: str) -> str:
                 ),
             ],
         )
-        return response.text or (
+        result = response.text or (
             '{"mode": 0, "identified_crop": "unknown", "growth_stage": "unknown", '
             '"condition": "unknown", "confidence": 0.0, '
             '"human_description": "Vision model did not return any output."}'
         )
+        # Persist immediately so downstream nodes (weather, market, compile)
+        # always see the vision result regardless of cross-node state timing.
+        ctx.state["vision_output"] = result
+        return result
     except Exception as e:
-        return (
+        fallback = (
             '{"mode": 0, "identified_crop": "unknown", "growth_stage": "unknown", '
             '"condition": "unknown", "confidence": 0.0, '
             f'"human_description": "Vision model error: {e!s}"}}'
         )
+        ctx.state["vision_output"] = fallback
+        return fallback
 
 
 vision_agent = Agent(
