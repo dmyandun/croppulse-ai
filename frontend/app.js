@@ -1072,7 +1072,8 @@ function renderFarmGrid() {
 function openEditParcelModal(id) {
     _editingProfileParcel = true;
     _selectedCell = id;
-    const cell = (APP.profile.grid||{})[id] || null;
+    APP.profile.grid = APP.profile.grid || {};
+    const cell = APP.profile.grid[id] || null;
     const cur = (typeof cell === 'object' && cell) ? cell : (cell ? { crop:cell, cycle:'vegetative', photo:null } : null);
 
     document.getElementById('ob-crop-cell-label').textContent = id;
@@ -1228,24 +1229,31 @@ function renderCalendar() {
         numEl.textContent=dayNum;
         cell.appendChild(numEl);
 
-        // Event dots
+        // Activity labels (full text in calendar cells)
         if(inMonth&&eventsMap[dayNum]) {
-            const dots=document.createElement('div');
-            dots.className='cal-dots';
-            // Show up to 3 dots
-            const evs=eventsMap[dayNum].slice(0,3);
-            // If parcel filter active, only show dots for that parcel
+            const evs=eventsMap[dayNum];
+            // If parcel filter active, only show for that parcel
             const filtered=APP.selectedParcel
                 ? evs.filter(e=>e.parcel===APP.selectedParcel.id)
                 : evs;
-            filtered.forEach(ev=>{
-                const dot=document.createElement('span');
-                dot.className='cal-dot';
+            const labelsWrap=document.createElement('div');
+            labelsWrap.className='cal-event-labels';
+            filtered.slice(0,3).forEach(ev=>{
                 const cr=cropOf(ev.crop);
-                dot.style.background=cr?cr.color:'#56708a';
-                dots.appendChild(dot);
+                const label=document.createElement('div');
+                label.className='cal-event-label';
+                label.style.borderLeftColor=cr?cr.color:'#56708a';
+                label.textContent=ev.activity;
+                label.title=`${ev.parcel}: ${ev.activity}`;
+                labelsWrap.appendChild(label);
             });
-            if(dots.children.length) cell.appendChild(dots);
+            if(filtered.length>3) {
+                const more=document.createElement('div');
+                more.className='cal-event-more';
+                more.textContent=`+${filtered.length-3} more`;
+                labelsWrap.appendChild(more);
+            }
+            if(labelsWrap.children.length) cell.appendChild(labelsWrap);
         }
 
         if(inMonth) {
