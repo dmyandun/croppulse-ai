@@ -6,7 +6,7 @@
 ![Cloud Run](https://img.shields.io/badge/Cloud%20Run-us--central1-4285F4?logo=googlecloud&logoColor=white)
 ![Track](https://img.shields.io/badge/Track-Agents%20for%20Good-16a34a)
 
-A multi-agent farming assistant built on **Google ADK 2.0** that fuses **visual crop analysis**, **live weather**, **commodity market prices**, and the farmer's own **farm-grid context** into a single, actionable recommendation. The farmer speaks with one voice — the **Advisory Agent** — while a directed graph of specialised agents and MCP-backed data nodes does the heavy lifting behind the scenes.
+A multi-agent farming assistant built on **Google ADK 2.0** that fuses **live weather forecasts**, **commodity market prices**, and the farmer's own **farm-grid context** into a single, actionable recommendation. The farmer speaks with one voice — the **Advisory Agent** — while a directed graph of specialised agents and MCP-backed data nodes does the heavy lifting behind the scenes.
 
 **Live deployment**: [croppulse-ai-459552199677.us-central1.run.app](https://croppulse-ai-459552199677.us-central1.run.app) · **Track**: Agents for Good.
 
@@ -18,34 +18,75 @@ A multi-agent farming assistant built on **Google ADK 2.0** that fuses **visual 
 - **Crop losses of up to 60 %** from preventable diseases (Sigatoka on banana, Moniliasis on cacao, chlorosis on coffee) — losses that a timely, targeted intervention would avert (INIAP Ecuador, 2022).
 - Agricultural intelligence exists — **weather forecasts, commodity prices, disease guides, extension-service manuals** — but each source is siloed, in a different language, and requires cross-referencing skills the average smallholder does not have time for.
 
-The average farmer's decision — *"should I spray this week?"* — needs **four correlated signals** at once. Nobody puts them side by side in the field.
+The average farmer's decision — *"should I spray this week?"* — needs **multiple correlated signals** at once. Nobody puts them side by side in the field.
 
 ## The Solution
 
-A **4-agent + 3-node** directed graph that fuses those four signals in one conversational turn:
+A **3-agent + 3-node** directed graph that fuses weather, market, and farm signals in one conversational turn:
 
 | Signal | Node | Where the data comes from |
 |---|---|---|
-| **Vision** | `vision_agent` (Gemini 2.5 Flash multimodal) | Photo attached in chat or during onboarding — 8 analysis modes (crop identification, soil, nutrients, weeds, disease, water stress, maturity, quality). |
 | **Weather** | `weather_node` → `weather_mcp` | Open-Meteo: current conditions, 7-day forecast, 14-day historical rainfall for leaching-risk. |
 | **Market** | `market_node` → `market_mcp` | Date-seeded deterministic price generator for 8 commodities: spot + 30-day trend. |
 | **Farm context** | `sheets_read_node` → `sheets_mcp` | Google Sheets — Profile, FarmGrid, CropPlan, Indicators, InteractionLog tabs. Falls back to an in-request `state_delta` envelope so onboarded data survives without a Sheet configured. |
 
-All four are stitched together by `compile_advisory_input` and rendered as farmer-facing prose by the single **Advisory Agent**. `security_screen` runs at the graph boundaries — EXIF stripping on incoming photos, PII redaction on outgoing text, dangerous-dosage guardrails on any agrochemical recommendation.
+All signals are stitched together by `compile_advisory_input` and rendered as farmer-facing prose by the single **Advisory Agent**. `security_screen` runs at the graph boundaries — PII redaction on outgoing text and dangerous-dosage guardrails on any agrochemical recommendation.
+
+---
+
+## Features
+
+### 🌾 Farm Dashboard
+- **Interactive parcel grid** — visual overview of all farm parcels with crop assignments (icons, colours, labels).
+- **Add Parcel (+)** — click the dashed cell to add a new parcel using the same crop selection modal as onboarding.
+- **Delete Parcel (−)** — each assigned parcel has a red minus button in the corner. Clicking it triggers a confirmation dialog before removing the parcel and all its data.
+- **Tap-to-inspect** — click any parcel to filter the calendar and indicators to that parcel.
+- **Real-time indicators** — health status, pending actions, weather conditions, and market prices updated after every AI interaction.
+
+### 📅 Crop Planner & Calendar
+- **Empty by default** — the calendar starts with no activities. Activities are only added when the user explicitly requests a plan via the AI Assistant.
+- **One-click planning buttons** — three buttons next to the "Crop Planner" title:
+  - 📅 **Generate Plan** — comprehensive crop planning schedule considering weather and market signals.
+  - 💧 **Maintenance** — irrigation, fertilization, and maintenance activities for the current month.
+  - 🐛 **Harvest & Pest** — harvest timeline and disease prevention schedule based on growth cycles.
+- **Auto-redirect to AI** — clicking any plan button switches to the AI Assistant tab and auto-sends the planning prompt.
+- **Save confirmation** — after the AI responds with recommended activities, a "Save X activities to your calendar?" prompt appears. Activities are added to the calendar **only after user confirmation**.
+- **Full activity labels** — saved activities display their full text inside calendar day cells (not just dots), with a coloured left border matching the crop type.
+- **Event list** — below the calendar, a detailed event list shows all activities with date, parcel, crop, and status badges (Scheduled / Pending / Completed / Overdue).
+
+### 🤖 AI Assistant
+- **Guided suggestions** — curated suggestion cards on the greeting screen that auto-send when clicked:
+  - 🔔 Alert-driven actions (if pending actions exist)
+  - 🌦️ Weather impact analysis
+  - 💰 Market timing (sell recommendations)
+  - 💚 Full farm health assessment
+  - 🌾 Harvest readiness check
+  - 🌱 Planting / weekly task recommendations
+- **Follow-up pills** — after each response, contextual follow-up buttons chain the user to the next relevant agent signal they haven't asked about yet.
+- **Dashboard sync** — AI responses containing `[INDICATORS]` blocks silently update the farm dashboard indicators, weather display, and market prices in real time.
+
+### 🛡️ Security & Safety
+- **Input validation** — truncation, prompt injection detection, PII redaction on all inputs.
+- **Output guardrails** — dosage caps on agrochemical recommendations, low-confidence disclaimers, `[INDICATORS]` block stripping from user-visible responses.
+- **Profile persistence** — farm profiles are saved to localStorage and optionally synced to Google Sheets for cross-device access.
+
+### 🚀 Onboarding
+- **3-step setup** — location selection → optional Google Sheets sync → parcel grid designer with crop picker and lifecycle stage.
+- **Database toggle** — choose between local JSON fallback or live Google Sheets cloud sync.
+
+---
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    U([Farmer]) -->|text + photo| SIN[security_input<br/>EXIF strip · injection guard]
+    U([Farmer]) -->|text| SIN[security_input<br/>injection guard]
     SIN --> SR[sheets_read_node<br/>Load farm context]
     SR --> R{Router Agent<br/>classify intent}
-    R -->|has_image + visual intent| V[Vision Agent<br/>Modes 0-7]
-    R -->|text-only| D[dispatch_advisory_signals]
-    V --> W[Weather node<br/>weather_mcp]
-    D --> W
+    R --> D[dispatch_advisory_signals]
+    D --> W[Weather node<br/>weather_mcp]
     W --> M[Market node<br/>market_mcp]
-    M --> C[compile_advisory_input<br/>fuse 4 signals]
+    M --> C[compile_advisory_input<br/>fuse 3 signals]
     C --> A[Advisory Agent<br/>farmer-facing]
     A --> SW[sheets_write_node<br/>persist Indicators<br/>+ InteractionLog]
     SW --> SOUT[security_output<br/>dose caps · PII redact · strip INDICATORS]
@@ -54,27 +95,23 @@ flowchart LR
     classDef agent fill:#8E75B2,stroke:#5b3fa0,color:#fff
     classDef node fill:#1E90FF,stroke:#0958c1,color:#fff
     classDef sec fill:#dc2626,stroke:#7f1d1d,color:#fff
-    class R,V,A agent
+    class R,A agent
     class SR,W,M,C,SW,D node
     class SIN,SOUT sec
 ```
 
 **Why a directed graph, not a linear chain?**
 - **Deterministic control flow**: security screens are anchored at START and END edges.
-- **Conditional branching**: `route_after_router` inspects `has_image` + intent and dispatches to the vision branch or straight to the advisory fan-out.
-- **Sequential signal gathering**: weather → market → compile is chained (Phase 16 change) so `compile_advisory_input` fires exactly once — earlier fan-in versions duplicated Advisory responses.
-- **Shared state**: `ctx.state` accumulates `farm_context`, `weather_output`, `market_output`, `vision_output`, `user_message` across nodes — no LLM sees another agent's raw prompt.
+- **Sequential signal gathering**: weather → market → compile is chained so `compile_advisory_input` fires exactly once.
+- **Shared state**: `ctx.state` accumulates `farm_context`, `weather_output`, `market_output`, `user_message` across nodes — no LLM sees another agent's raw prompt.
 
 ## Key ADK 2.0 concepts demonstrated
 
 | Concept | Where it lives | Notes |
 |---|---|---|
-| **Multi-agent orchestration** via `Workflow(edges=[...])` | `workflow.py:194-232` | Directed graph, not a chain — enforces security screens and conditional routing. |
+| **Multi-agent orchestration** via `Workflow(edges=[...])` | `workflow.py` | Directed graph — enforces security screens and conditional routing. |
 | **Function nodes** side-by-side with LLM agents | `nodes/*.py` | `security_input_validation`, `sheets_read_node`, `weather_node`, `market_node`, `dispatch_advisory_signals`, `compile_advisory_input`, `sheets_write_node`, `security_output_validation`. |
-| **Event-driven dynamic routing** | `workflow.py:87-130` | `route_after_router` emits `Event(actions=EventActions(route="vision"|"advisory"))` based on state. |
-| **Session state via `EventActions(state_delta=...)`** | `app.py:121-144` | `/run` accepts a client envelope and commits it through `session_service.append_event(...)` so the workflow starts with the farmer's real profile pre-loaded. |
-| **Artifact channel for multimodal input** | `app.py:146-174`, `security_screen.py:381`, `vision_agent.py:28-45` | Uploaded images are saved via `InMemoryArtifactService`; nodes discover them with `ctx.list_artifacts()` / `ctx.load_artifact()`. |
-| **Tool-augmented agent** | `vision_agent.py:143-174` | Vision Agent's instruction mandates calling `analyze_crop_image(mode, crop_type)` which itself runs a multimodal Gemini call and returns structured JSON. |
+| **Session state via `EventActions(state_delta=...)`** | `app.py` | `/run` accepts a client envelope and commits it through `session_service.append_event(...)` so the workflow starts with the farmer's real profile pre-loaded. |
 | **MCP as data-access layer** | `mcp_servers/*.py` | Weather / Market / Sheets each expose FastMCP servers over stdio. Agents remain oblivious to underlying REST APIs. |
 
 ## Tech stack
@@ -143,18 +180,17 @@ The service uses the default Cloud Run compute service account for both Vertex A
 
 ```
 croppulse-ai/
-├── app.py                   # FastAPI + Runner. /run accepts state_delta + inline_data.
-├── workflow.py              # Directed graph: 4 agents + 5 function nodes.
+├── app.py                   # FastAPI + Runner. /run accepts state_delta envelope.
+├── workflow.py              # Directed graph: 3 agents + function nodes.
 │
 ├── agents/
-│   ├── router_agent.py      # Intent classification → JSON {intent, mode, confidence}
-│   ├── vision_agent.py      # Multimodal, 8 modes (0-7). Tool: analyze_crop_image.
+│   ├── router_agent.py      # Intent classification → JSON {intent, confidence}
+│   ├── advisory_agent.py    # ONLY farmer-facing agent. Fuses weather+market+farm signals.
 │   ├── weather_agent.py     # Reserved. Weather is currently fetched via weather_node.
-│   ├── market_agent.py      # Reserved. Market is fetched via market_node.
-│   └── advisory_agent.py    # ONLY farmer-facing agent. Fuses vision+weather+market+farm.
+│   └── market_agent.py      # Reserved. Market is fetched via market_node.
 │
 ├── nodes/
-│   ├── security_screen.py   # Input: EXIF strip, PII redact, injection guard, has_image flag.
+│   ├── security_screen.py   # Input: PII redact, injection guard.
 │   │                        # Output: dosage cap, low-confidence disclaimer, [INDICATORS] strip.
 │   ├── sheets_manager.py    # sheets_read_node (loads farm_context) + sheets_write_node (persists Indicators + InteractionLog).
 │   ├── weather_node.py      # MCP client → 3 Open-Meteo tools (current, forecast, historical rain).
@@ -166,9 +202,10 @@ croppulse-ai/
 │   └── sheets_mcp.py        # gspread + ADC → Google Sheets. Falls back to crop_logs.json mock.
 │
 ├── frontend/
-│   ├── index.html           # 3-step onboarding + tabbed dashboard (Farm / AI / Planner).
-│   ├── app.js               # State, agentRun envelope, renderFarmGrid, chat, crop modal.
-│   └── style.css
+│   ├── index.html           # 3-step onboarding + tabbed dashboard (Farm / AI).
+│   ├── app.js               # State, agentRun envelope, renderFarmGrid, chat, crop modal,
+│   │                        # calendar rendering, parsePlanActivities, save confirmation.
+│   └── styles.css           # Dark theme, glassmorphism, calendar labels, plan buttons.
 │
 ├── tests/
 │   ├── unit/                # Focused: security_screen, workflow-graph shape.
@@ -197,7 +234,7 @@ Read-only, deterministic. Per-date seeded generator so integration tests produce
 - `get_price_trend(crop, days=30)` → 30-day time series.
 
 ### `sheets_mcp.py`
-Read + write. Auth priority (Phase 18):
+Read + write. Auth priority:
 1. `GOOGLE_SERVICE_ACCOUNT_JSON` env → file path.
 2. `GOOGLE_SHEETS_CREDENTIALS_JSON` env → inline JSON.
 3. **Application Default Credentials** → Cloud Run compute SA is picked up automatically without any env config.
@@ -210,17 +247,18 @@ Tabs: `Profile`, `FarmGrid`, `CropPlan`, `Indicators`, `InteractionLog`. When no
 
 - **Onboarding — Step 1**: Location selectors (country / province / canton).
 - **Onboarding — Step 2**: Google Sheets sync (optional, with copy-to-clipboard SA email).
-- **Onboarding — Step 3**: Farm-grid designer with crop picker + optional photo capture per parcel.
-- **Farm Dashboard**: parcel grid + indicators (health / next activity / market price / weather).
-- **AI Assistant**: chat with photo attach, follow-up pills, `[INDICATORS]` block stripped from view.
-- **Crop Planner**: calendar of scheduled activities per parcel.
+- **Onboarding — Step 3**: Farm-grid designer with crop picker and lifecycle stage selector.
+- **Farm Dashboard**: Parcel grid with add (+) and delete (−) controls, health indicators, weather, and market prices.
+- **Crop Planner**: Empty calendar with plan generation buttons. Full activity labels appear after AI-generated plan is confirmed.
+- **AI Assistant**: Suggestion cards, follow-up pills, and calendar save confirmation flow.
 
 ## Roadmap / future work
 
 - **Voice input & output** — Gemini Live so farmers can query the assistant hands-free in the field.
+- **Vision agent (re-integration)** — multimodal crop/disease analysis from photos, currently removed pending improved accuracy.
 - **Community knowledge sharing** — a cooperative Google Sheet where nearby farmers share disease reports; disease-diagnosis agent could correlate outbreaks across neighbours.
 - **Government extension service integration** — direct-line MCPs to INIAP (Ecuador), Agrosavia (Colombia), INIA (Peru) so agent recommendations link to the local, certified guidance.
-- **Satellite imagery** — Sentinel-2 NDVI overlays per parcel, complementing on-the-ground photo diagnostics.
+- **Satellite imagery** — Sentinel-2 NDVI overlays per parcel, complementing on-the-ground diagnostics.
 - **Offline-first PWA** — the current UI is mostly client-side already; a service worker + cached MCP responses would let the app function during rural connectivity drops.
 - **Native Spanish / Portuguese / Quechua responses** — the model handles it but instructions and disclaimers are still English-first.
 
