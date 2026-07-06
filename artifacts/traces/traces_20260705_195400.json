@@ -1,0 +1,206 @@
+{
+  "eval_cases": [
+    {
+      "prompt": {
+        "parts": [
+          {
+            "text": "Hello, what can you help me with?"
+          }
+        ],
+        "role": "user"
+      },
+      "responses": [
+        {
+          "response": {
+            "parts": [
+              {
+                "text": "Hello! I can help you with many things related to your farm, Finca Demo. I can give you updates on the health of your Cacao, Banana, and Corn crops, provide current weather and a 7-day forecast for your location, and tell you about market prices for your crops. I can also help you with your crop plan and suggest actions for your parcels P1, P2, and P3."
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ],
+      "eval_case_id": "greeting",
+      "agent_data": {
+        "agents": {
+          "croppulse_workflow": {
+            "agent_id": "croppulse_workflow",
+            "agent_type": "Workflow",
+            "description": "",
+            "tools": [],
+            "sub_agents": []
+          }
+        },
+        "turns": [
+          {
+            "turn_index": 0,
+            "turn_id": "turn_0",
+            "events": [
+              {
+                "author": "router_agent",
+                "content": {
+                  "parts": [
+                    {
+                      "text": "```json\n{\n  \"intent\": \"GENERAL_QUESTION\",\n  \"mode\": null,\n  \"confidence\": 0.1\n}\n```"
+                    }
+                  ],
+                  "role": "model"
+                }
+              },
+              {
+                "author": "advisory_agent",
+                "content": {
+                  "parts": [
+                    {
+                      "text": "Hello! I can help you with many things related to your farm, Finca Demo. I can give you updates on the health of your Cacao, Banana, and Corn crops, provide current weather and a 7-day forecast for your location, and tell you about market prices for your crops. I can also help you with your crop plan and suggest actions for your parcels P1, P2, and P3."
+                    }
+                  ],
+                  "role": "model"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "prompt": {
+        "parts": [
+          {
+            "text": "What's the weather like in San Francisco?"
+          }
+        ],
+        "role": "user"
+      },
+      "responses": [
+        {
+          "response": {
+            "parts": [
+              {
+                "text": "I do not have weather data for San Francisco. My current weather information is for El Carmen, where your farm Finca Demo is located."
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ],
+      "eval_case_id": "weather_query",
+      "agent_data": {
+        "agents": {
+          "croppulse_workflow": {
+            "agent_id": "croppulse_workflow",
+            "agent_type": "Workflow",
+            "description": "",
+            "tools": [],
+            "sub_agents": []
+          }
+        },
+        "turns": [
+          {
+            "turn_index": 0,
+            "turn_id": "turn_0",
+            "events": [
+              {
+                "author": "router_agent",
+                "content": {
+                  "parts": [
+                    {
+                      "text": "```json\n{\n  \"intent\": \"GENERAL_QUESTION\",\n  \"mode\": null,\n  \"confidence\": 1.0\n}\n```"
+                    }
+                  ],
+                  "role": "model"
+                }
+              },
+              {
+                "author": "advisory_agent",
+                "content": {
+                  "parts": [
+                    {
+                      "text": "I do not have weather data for San Francisco. My current weather information is for El Carmen, where your farm Finca Demo is located."
+                    }
+                  ],
+                  "role": "model"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "prompt": {
+        "parts": [
+          {
+            "text": "What is the capital of France?"
+          }
+        ],
+        "role": "user"
+      },
+      "responses": [
+        {
+          "response": {
+            "parts": [
+              {
+                "text": "The capital of France is Paris."
+              }
+            ],
+            "role": "model"
+          }
+        }
+      ],
+      "reference": {
+        "response": {
+          "parts": [
+            {
+              "text": "The capital of France is Paris."
+            }
+          ],
+          "role": "model"
+        }
+      },
+      "eval_case_id": "capital_lookup",
+      "agent_data": {
+        "agents": {
+          "croppulse_workflow": {
+            "agent_id": "croppulse_workflow",
+            "agent_type": "Workflow",
+            "description": "",
+            "tools": [],
+            "sub_agents": []
+          }
+        },
+        "turns": [
+          {
+            "turn_index": 0,
+            "turn_id": "turn_0",
+            "events": [
+              {
+                "author": "router_agent",
+                "content": {
+                  "parts": [
+                    {
+                      "text": "```json\n{\n  \"intent\": \"GENERAL_QUESTION\",\n  \"mode\": null,\n  \"confidence\": 0\n}\n```"
+                    }
+                  ],
+                  "role": "model"
+                }
+              },
+              {
+                "author": "advisory_agent",
+                "content": {
+                  "parts": [
+                    {
+                      "text": "The capital of France is Paris."
+                    }
+                  ],
+                  "role": "model"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

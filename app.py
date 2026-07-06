@@ -23,9 +23,7 @@ from workflow import root_workflow
 # Set agent directory as current directory
 AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Initialize session service, artifact service, and runner using the same config.
-# Without an artifact_service, ctx.list_artifacts() raises "Artifact service is
-# not initialized" and the vision agent is never reached — Phase 18 fix.
+# Initialize session service, artifact service, and runner.
 session_service = create_session_service_from_options(base_dir=AGENT_DIR)
 artifact_service = InMemoryArtifactService()
 runner = Runner(
@@ -108,13 +106,9 @@ async def legacy_run(request: Request):
         state_delta = body.get("state_delta") or {}
 
         text = ""
-        image_inline_parts = []
         for p in new_message_raw.get("parts", []) or []:
             if not text and isinstance(p.get("text"), str):
                 text = p.get("text", "")
-            inline = p.get("inline_data") or p.get("inlineData")
-            if isinstance(inline, dict) and inline.get("data"):
-                image_inline_parts.append(inline)
 
         try:
             session = await session_service.get_session(
@@ -152,36 +146,6 @@ async def legacy_run(request: Request):
                     session.state.update(state_delta)
                 except Exception:
                     pass
-
-        # Persist uploaded images as ADK artifacts so nodes downstream can
-        # discover them via ctx.list_artifacts() / ctx.load_artifact(). We
-        # deliberately keep the workflow Content text-only — the vision agent
-        # loads its image from the artifact channel, not from message parts,
-        # and function nodes like security_input_validation would otherwise
-        # trip ADK's "non-text parts dropped during auto-conversion" warning.
-        for idx, inline in enumerate(image_inline_parts):
-            try:
-                raw = base64.b64decode(inline["data"])
-                mime = (
-                    inline.get("mime_type")
-                    or inline.get("mimeType")
-                    or "image/jpeg"
-                )
-                ext = mime.split("/")[-1] if "/" in mime else "bin"
-                filename = f"user_upload_{idx}.{ext}"
-                part = types.Part.from_bytes(data=raw, mime_type=mime)
-                await artifact_service.save_artifact(
-                    app_name="croppulse-ai",
-                    user_id=user_id,
-                    session_id=session_id,
-                    filename=filename,
-                    artifact=part,
-                )
-            except Exception:
-                logging_mod = __import__("logging")
-                logging_mod.getLogger(__name__).warning(
-                    "legacy_run: failed to save inline image as artifact"
-                )
 
         message = types.Content(
             role="user", parts=[types.Part.from_text(text=text)]

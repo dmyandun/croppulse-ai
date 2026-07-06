@@ -1480,37 +1480,53 @@ function buildSuggestions() {
     const parcels=APP.profile?.parcels||[];
     const alerted=APP.indicators.filter(i=>i.pending_action&&i.pending_action!=='None');
     const emptyParcels=parcels.filter(p=>!p.crop||p.crop==='empty');
-    const crops=[...new Set(parcels.map(p=>p.crop).filter(Boolean))];
+    const crops=[...new Set(parcels.map(p=>p.crop).filter(c=>c&&c!=='empty'))];
     const mainCrop=crops[0]||'cacao';
+    const mainLabel=cropOf(mainCrop)?.label||mainCrop;
 
+    // 1. Alert-driven (if any pending actions)
     if(alerted.length) {
         const a=alerted[0];
         sugs.push({ icon:'<i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>',
             iconBg:'rgba(245,158,11,.12)', category:'alert',
             text:`Review ${a.pending_action} in parcel ${a.parcel}` });
     }
+
+    // 2. Weather signal — drives weather_node
+    sugs.push({ icon:'<i class="fa-solid fa-cloud-sun" style="color:#38bdf8"></i>',
+        iconBg:'rgba(56,189,248,.12)', category:'weather',
+        text:"How will this week's weather affect my crops?" });
+
+    // 3. Market signal — drives market_node
+    sugs.push({ icon:'<i class="fa-solid fa-chart-line" style="color:#a855f7"></i>',
+        iconBg:'rgba(168,85,247,.12)', category:'market',
+        text:`Is it a good time to sell my ${mainLabel}?` });
+
+    // 4. Farm health audit — drives all signals + full advisory
+    sugs.push({ icon:'<i class="fa-solid fa-heart-pulse" style="color:#10b981"></i>',
+        iconBg:'rgba(16,185,129,.12)', category:'health',
+        text:'Give me a full health assessment for my farm' });
+
+    // 5. Harvest assessment
+    if(crops.length) {
+        sugs.push({ icon:'<i class="fa-solid fa-wheat-awn" style="color:#f59e0b"></i>',
+            iconBg:'rgba(245,158,11,.12)', category:'harvest',
+            text:`Is my ${mainLabel} ready to harvest?` });
+    }
+
+    // 6. Planting / planning
     if(emptyParcels.length) {
         const ids=emptyParcels.slice(0,2).map(p=>p.id).join(' and ');
         sugs.push({ icon:'<i class="fa-solid fa-seedling" style="color:#10b981"></i>',
             iconBg:'rgba(16,185,129,.12)', category:'plan',
-            text:`What can I plant in parcel${emptyParcels.length>1?'s':''} ${ids}?` });
+            text:`What should I plant in parcel${emptyParcels.length>1?'s':''} ${ids}?` });
+    } else {
+        const firstParcel=parcels[0]?.id||'A1';
+        sugs.push({ icon:'<i class="fa-solid fa-clipboard-list" style="color:#3b82f6"></i>',
+            iconBg:'rgba(59,130,246,.12)', category:'plan',
+            text:`What should I do on parcel ${firstParcel} this week?` });
     }
-    if(crops.length) {
-        sugs.push({ icon:'<i class="fa-solid fa-magnifying-glass" style="color:#a855f7"></i>',
-            iconBg:'rgba(168,85,247,.12)', category:'harvest',
-            text:`Is my ${cropOf(mainCrop)?.label||mainCrop} ready to harvest?` });
-    }
-    sugs.push({ icon:'<i class="fa-solid fa-star" style="color:#a855f7"></i>',
-        iconBg:'rgba(168,85,247,.12)', category:'quality',
-        text:`Analyze the quality of my harvested ${cropOf(mainCrop)?.label||'cacao'}` });
-    sugs.push({ icon:'<i class="fa-solid fa-chart-line" style="color:#38bdf8"></i>',
-        iconBg:'rgba(56,189,248,.12)', category:'market',
-        text:`Is it a good time to sell my ${cropOf(mainCrop)?.label||mainCrop}?` });
-    if(crops.length>1) {
-        sugs.push({ icon:'<i class="fa-solid fa-cloud-sun" style="color:#38bdf8"></i>',
-            iconBg:'rgba(56,189,248,.12)', category:'plan',
-            text:'How will this week\'s weather affect my crops?' });
-    }
+
     return sugs.slice(0,6);
 }
 
@@ -1575,13 +1591,10 @@ async function sendMessage() {
     const input=document.getElementById('chat-input');
     const sendBtn=document.getElementById('chat-send-btn');
     const text=input.value.trim();
-    if(!text&&!APP.pendingImage) return;
+    if(!text) return;
 
-    const img = APP.pendingImage;
-    const imgDataUrl=img?.dataUrl||null;
-    addMessage('user', text||'[Photo attached]', imgDataUrl);
+    addMessage('user', text);
     input.value=''; sendBtn.disabled=true;
-    clearImageAttachment();
 
     const typing=addTypingIndicator();
 
@@ -1591,7 +1604,7 @@ async function sendMessage() {
     const fullMessage=text;
 
     try {
-        const response=await agentRun(fullMessage, img);
+        const response=await agentRun(fullMessage);
         removeTypingIndicator();
         const msgEl=addMessage('agent', response);
 
@@ -1667,43 +1680,34 @@ async function sendMessage() {
 function generateFollowUps(response, question) {
     const pills=[];
     const lower=response.toLowerCase();
+    const qLower=question.toLowerCase();
+    const crops=APP.profile?.parcels?.map(p=>p.crop).filter(c=>c&&c!=='empty')||[];
+    const mainCrop=cropOf(crops[0]||'cacao')?.label||'cacao';
+
+    // Chain to the next signal the user hasn't asked about yet
+    const mentionsWeather=lower.includes('weather')||lower.includes('rain')||lower.includes('forecast');
+    const mentionsMarket=lower.includes('price')||lower.includes('market')||lower.includes('sell');
+    const mentionsFarm=lower.includes('parcel')||lower.includes('farm')||lower.includes('grid');
+
+    // Suggest the signal the response didn't focus on
+    if(!qLower.includes('weather')&&!qLower.includes('rain'))
+        pills.push("How will this week's weather affect my crops?");
+    if(!qLower.includes('sell')&&!qLower.includes('price')&&!qLower.includes('market'))
+        pills.push(`Is it a good time to sell my ${mainCrop}?`);
+    if(!qLower.includes('health')&&!qLower.includes('assessment')&&!qLower.includes('audit'))
+        pills.push('Give me a full health assessment for my farm');
+
+    // Contextual follow-ups based on response content
     if(lower.includes('fertiliz')) pills.push('What fertiliser should I use?');
     if(lower.includes('disease')||lower.includes('fungus')||lower.includes('pest'))
         pills.push('How do I treat this organically?');
     if(lower.includes('harvest')||lower.includes('maturity'))
         pills.push('What is the best time to harvest?');
-    if(lower.includes('price')||lower.includes('market')||lower.includes('sell'))
-        pills.push('Who are the best buyers near me?');
-    if(lower.includes('weather')||lower.includes('rain'))
-        pills.push('Show me the 7-day forecast');
-    if(!pills.length) {
-        pills.push('Tell me more');
-        pills.push('What should I do first?');
-    }
+
     return pills.slice(0,3);
 }
 
-// ─────────────────────────────────────────────────────────────
-// IMAGE ATTACHMENT
-// -------------------------------------------------------------
-function clearImageAttachment() {
-    APP.pendingImage=null;
-    document.getElementById('chat-img-preview-bar').style.display='none';
-    document.getElementById('chat-img-thumb').src='';
-    document.getElementById('chat-image-input').value='';
-}
 
-function attachImage(file) {
-    if(!file||!file.type.startsWith('image/')) return;
-    const reader=new FileReader();
-    reader.onload=e=>{
-        APP.pendingImage={ dataUrl:e.target.result, mimeType:file.type };
-        document.getElementById('chat-img-thumb').src=e.target.result;
-        document.getElementById('chat-img-preview-bar').style.display='flex';
-        document.getElementById('chat-send-btn').disabled=false;
-    };
-    reader.readAsDataURL(file);
-}
 
 // ─────────────────────────────────────────────────────────────
 // WEATHER (direct Open-Meteo, no key required)
@@ -1724,17 +1728,8 @@ async function fetchWeatherDirect(lat, lng) {
 // ─────────────────────────────────────────────────────────────
 // ADK AGENT CALL  (POST /run)
 // -------------------------------------------------------------
-async function agentRun(text, pendingImage = null) {
+async function agentRun(text) {
     const parts = [{ text }];
-    if (pendingImage) {
-        const base64 = pendingImage.dataUrl.split(',')[1];
-        parts.push({
-            inline_data: {
-                mime_type: pendingImage.mimeType,
-                data: base64
-            }
-        });
-    }
     const res=await fetch('/run',{
         method:'POST', headers:{'Content-Type':'application/json'},
         signal:AbortSignal.timeout(45000),
@@ -1840,25 +1835,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput=document.getElementById('chat-input');
     const sendBtn=document.getElementById('chat-send-btn');
     chatInput?.addEventListener('input',()=>{
-        sendBtn.disabled=!chatInput.value.trim()&&!APP.pendingImage;
+        sendBtn.disabled=!chatInput.value.trim();
     });
     chatInput?.addEventListener('keydown',e=>{
         if(e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
     sendBtn?.addEventListener('click',sendMessage);
 
-    // ── Chat: camera button ──────────────────────────────────
-    document.getElementById('chat-camera-btn')?.addEventListener('click',()=>{
-        document.getElementById('chat-image-input')?.click();
-    });
-    document.getElementById('chat-image-input')?.addEventListener('change',e=>{
-        if(e.target.files[0]) attachImage(e.target.files[0]);
-    });
-    document.getElementById('chat-img-remove')?.addEventListener('click',()=>{
-        clearImageAttachment();
-        const inp=document.getElementById('chat-input');
-        sendBtn.disabled=!inp.value.trim();
-    });
 
     // ── Database Config Modal ───────────────────────────────
     const dbStatusBtn = document.getElementById('topbar-db-status');

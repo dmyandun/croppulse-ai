@@ -202,25 +202,12 @@
                             <option value="vegetative">Vegetative (Active leaf/stem growth)</option>
                             <option value="flowering_fruiting">Flowering / Fruiting</option>
                             <option value="harvesting">Harvest Ready</option>
-                            <option value="unknown">I don't know (take/upload photo)</option>
                         </select>
                         <i class="fa-solid fa-chevron-down ob-select-arrow" style="right:12px;position:absolute;top:50%;transform:translateY(-50%);pointer-events:none;color:#94a3b8;"></i>
                     </div>
                 </div>
 
-                <!-- Optional image capture block (Phase 19: only when cycle=unknown) -->
-                <div id="ob-crop-photo-group" style="display:none;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-                        <span style="font-size:0.8rem;color:#60a5fa;font-weight:600;"><i class="fa-solid fa-camera"></i> Crop Photo Analysis</span>
-                        <button id="ob-crop-photo-btn" class="ob-btn-ghost" style="padding:0.25rem 0.5rem;font-size:0.75rem;background:#1e293b;border:1px solid #334155;border-radius:0.25rem;color:#3b82f6;cursor:pointer;"><i class="fa-solid fa-upload"></i> Choose Photo</button>
-                    </div>
-                    <input type="file" id="ob-crop-photo-input" accept="image/*" style="display:none;">
-                    <div id="ob-crop-photo-preview-wrap" style="display:none;align-items:center;gap:0.75rem;margin-top:0.5rem;">
-                        <img id="ob-crop-photo-preview" src="" style="width:48px;height:48px;object-fit:cover;border-radius:0.25rem;border:1px solid #334155;">
-                        <span id="ob-crop-photo-filename" style="font-size:0.75rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;"></span>
-                        <button id="ob-crop-photo-remove" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.1rem;margin-left:auto;">&times;</button>
-                    </div>
-                </div>
+
 
                 <button id="ob-crop-details-save" class="ob-btn ob-btn-primary ob-btn-full" style="width:100%;">Save Details</button>
                 <button id="ob-crop-details-remove" style="display:none;width:100%;margin-top:0.5rem;background:transparent;border:1px solid #ef4444;color:#ef4444;padding:0.55rem;border-radius:0.375rem;font-size:0.8rem;font-weight:600;cursor:pointer;">
@@ -394,16 +381,8 @@
 
             <!-- Bottom Input Bar -->
             <div class="chat-bottom-bar">
-                <button class="chat-icon-btn" id="chat-camera-btn" aria-label="Attach photo">
-                    <i class="fa-solid fa-camera"></i>
-                </button>
-                <input type="file" id="chat-image-input" accept="image/*" style="display:none">
 
                 <div class="chat-input-wrap">
-                    <div id="chat-img-preview-bar" class="chat-img-preview-bar" style="display:none">
-                        <img id="chat-img-thumb" src="" alt="Attached">
-                        <button id="chat-img-remove" class="chat-img-remove" aria-label="Remove image">&times;</button>
-                    </div>
                     <input type="text" id="chat-input" class="chat-input"
                            placeholder="Type your question…" autocomplete="off" autocorrect="off">
                 </div>
