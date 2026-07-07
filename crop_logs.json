@@ -553,6 +553,62 @@
       "diagnosis": "",
       "recommendation": "",
       "date": "2026-07-05 20:55"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — FARM_AUDIT",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 21:48"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — PROFILE_SAVE",
+      "diagnosis": "Your Cacao (P1) and Banana (P2) parcels are currently healthy. However, your Corn (P3) parcel is showing signs of dryness and water stress. The weather today is partly cloudy with high humidity, and m",
+      "recommendation": "1.  **Immediate Irrigation for Corn (P3):** Your Corn in parcel P3 is currently dry and water-stressed. Despite the upcoming rain, it is critical to irrigate it urgently today, July 6th, to prevent fu",
+      "date": "2026-07-05 21:49"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "The current weather is partly cloudy with a temperature of 24.1°C, but rain is expected to start today and continue through the week, with a thunderstorm predicted for July 10th. Your corn in parcel P",
+      "recommendation": "1.  **Immediate action for Corn (P3):** Despite the upcoming rain, please prioritize urgent irrigation for your corn in parcel P3 today, July 5th. This will help the plants recover before the heavier ",
+      "date": "2026-07-05 21:49"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — PROFILE_SAVE",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 21:49"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 22:23"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "The corn in parcel P3 is currently dry and experiencing water stress. Significant rainfall is expected over the next seven days, including moderate rain showers today and a thunderstorm on July 10th. ",
+      "recommendation": "1.  **Parcel P3 (Corn)**: Urgently irrigate your corn today, July 5th, despite the incoming rain. This is crucial to relieve the current water stress and prevent crop loss.\n2.  **Parcel P1 (Cacao)**: ",
+      "date": "2026-07-05 22:24"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "",
+      "recommendation": "",
+      "date": "2026-07-05 22:24"
+    },
+    {
+      "parcel": "Corn",
+      "mode": "Mode 0 — GENERAL_QUESTION",
+      "diagnosis": "The corn in Parcel P3 is currently suffering from water stress and needs urgent irrigation. Your cacao in Parcel P1 and bananas in Parcel P2 are both healthy. The weather forecast shows significant ra",
+      "recommendation": "is still needed for P3.",
+      "date": "2026-07-05 22:25"
     }
   ]
 }
