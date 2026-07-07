@@ -2035,9 +2035,13 @@ async function fetchWeatherDirect(lat, lng) {
 // -------------------------------------------------------------
 async function agentRun(text) {
     const parts = [{ text }];
+    // 120 s cap. Plan-generation responses (structured [INDICATORS] output
+    // with a full crop_plan_updates array) legitimately take 30–60 s end-to-
+    // end; the previous 45 s cap fired before Gemini finished. Cloud Run's
+    // per-request cap is 300 s so this stays well within the platform limit.
     const res=await fetch('/run',{
         method:'POST', headers:{'Content-Type':'application/json'},
-        signal:AbortSignal.timeout(45000),
+        signal:AbortSignal.timeout(120000),
         body:JSON.stringify({
             user_id:APP.userId, session_id:APP.sessionId,
             state_delta: buildStateDelta(APP.profile),

@@ -64,6 +64,8 @@ advisory_agent = Agent(
         "- `activity` MUST be an imperative, concrete task the farmer can execute in a single visit (e.g. 'Apply nitrogen fertilizer', 'Prune lower branches', 'Scout for black sigatoka lesions'). NEVER a section title, category label, or heading like 'Pest Management', 'Maintenance Phase', 'Harvest Window' — those go in the prose portion of the response, not in this array.\n"
         "- `activity` is at most 60 characters. If a task needs more context, put the context in your prose response and keep the array entry short.\n"
         "- If a task is uncertain or you cannot commit to a specific date, OMIT it from the array. Fewer well-dated tasks are better than many fabricated ones.\n"
+        "- Aim for 6–12 concrete activities per plan; never exceed 20. Bounded arrays keep response latency reasonable and give the farmer a manageable checklist.\n"
+        "- Also keep the prose portion tight (~200 words max). The [INDICATORS] block is the source of truth for the calendar; long prose is optional context, not required.\n"
         "Only use parcel IDs that appear in the FARM CONTEXT grid."
     ),
 )
