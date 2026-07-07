@@ -241,16 +241,16 @@ Read + write. Auth priority:
 
 Tabs: `Profile`, `FarmGrid`, `CropPlan`, `Indicators`, `InteractionLog`. When no `sheet_id` is provided or ADC is unavailable, falls back to a local `crop_logs.json` mock so local development still exercises the write path.
 
-## Screenshots
+## Screens & user journey
 
-*(to be added — placeholders)*
+To see the app end-to-end without deploying, run it locally (see **Setup** above) and follow this path:
 
-- **Onboarding — Step 1**: Location selectors (country / province / canton).
-- **Onboarding — Step 2**: Google Sheets sync (optional, with copy-to-clipboard SA email).
-- **Onboarding — Step 3**: Farm-grid designer with crop picker and lifecycle stage selector.
-- **Farm Dashboard**: Parcel grid with add (+) and delete (−) controls, health indicators, weather, and market prices.
-- **Crop Planner**: Empty calendar with plan generation buttons. Full activity labels appear after AI-generated plan is confirmed.
-- **AI Assistant**: Suggestion cards, follow-up pills, and calendar save confirmation flow.
+1. **Onboarding — Step 1**: pick country → province → canton. The canton resolves to (lat, lon) via the lookup table in `mcp_servers/weather_mcp.py`.
+2. **Onboarding — Step 2**: optionally paste a Google Sheet ID. If skipped, the app uses the local `crop_logs.json` mock and the per-request `state_delta` envelope so farm data survives without any Sheets credentials.
+3. **Onboarding — Step 3**: design the farm grid — click cells to add parcels with a crop picker and lifecycle stage.
+4. **Farm Dashboard**: parcel grid with **+** (add) and **−** (delete-with-confirm) controls. Health, pending actions, weather, and market prices update after every AI turn.
+5. **Crop Planner**: empty calendar by default. The three plan buttons (📅 Generate Plan · 💧 Maintenance · 🐛 Harvest & Pest) switch to the AI tab, auto-send the prompt, and surface a "Save X activities to your calendar?" confirmation before persisting.
+6. **AI Assistant**: greeting-screen suggestion cards, follow-up pills, and inline calendar-save flow.
 
 ## Roadmap / future work
 

@@ -54,9 +54,6 @@ async def weather_node(ctx: Context, node_input: str) -> str:
     - 7-day daily forecast
     - Historical rainfall (last 14 days) for leaching risk assessment
     """
-    # Vision output is stored directly in ctx.state by the vision agent's
-    # analyze_crop_image tool. No need to relay it here.
-
     lat = float(ctx.state.get("latitude", -0.2687))
     lon = float(ctx.state.get("longitude", -79.4326))
     location_name = ctx.state.get("canton", "el_carmen")

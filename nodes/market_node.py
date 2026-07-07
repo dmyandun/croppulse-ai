@@ -53,9 +53,6 @@ async def market_node(ctx: Context, node_input: str) -> str:
     - Current spot price
     - 30-day price trend and percentage change
     """
-    # Vision output is stored directly in ctx.state by the vision agent's
-    # analyze_crop_image tool. No need to relay it here.
-
     # Gather all crops on the farm (from Sheets context)
     crops: list[str] = ctx.state.get("crops", [ctx.state.get("selected_crop", "cacao")])
     # De-duplicate while preserving order

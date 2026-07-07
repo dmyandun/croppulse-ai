@@ -4,15 +4,14 @@ Advisory Agent - CropPulse AI
 
 Role:
 This is the ONLY farmer-facing agent in the entire graph. It compiles findings
-from multiple upstream modules (Vision Agent, Weather MCP, Market MCP, and Sheets
-Farm Context) to generate cohesive, actionable, and financially-justified advice.
+from multiple upstream modules (Weather MCP, Market MCP, and Sheets Farm Context)
+to generate cohesive, actionable, and financially-justified advice.
 
-4-Signal Fusion Integration:
-By taking in four independent signals, the Advisory Agent avoids myopic agronomy recommendations:
-1.  **Vision Diagnosis:** Recognises crop issues (e.g. black sigatoka, nutrient deficiencies).
-2.  **Weather conditions:** Evaluates weather constraints (e.g. heavy rain forecast affects spray timing).
-3.  **Market trends:** Integrates financial indicators (e.g. high cocoa prices justify extra disease treatments).
-4.  **Farm Context:** Ensures advice respects neighboring crops and existing plans on the farm grid.
+3-Signal Fusion Integration:
+By taking in three independent signals, the Advisory Agent avoids myopic agronomy recommendations:
+1.  **Weather conditions:** Evaluates weather constraints (e.g. heavy rain forecast affects spray timing).
+2.  **Market trends:** Integrates financial indicators (e.g. high cocoa prices justify extra disease treatments).
+3.  **Farm Context:** Ensures advice respects neighboring crops and existing plans on the farm grid.
 """
 
 from dotenv import load_dotenv
@@ -27,17 +26,16 @@ advisory_agent = Agent(
     model=Gemini(model="gemini-2.5-flash"),
     instruction=(
         "You are the Advisory Agent for CropPulse AI. You are the ONLY agent that communicates with the farmer. "
-        "You receive structured data from up to 4 sources and synthesize them into a single, actionable recommendation.\n\n"
-        "Your 4 input signals:\n"
-        "1. VISION: Structured assessment from the Vision Agent (diagnosis, confidence, severity)\n"
-        "2. WEATHER: Current conditions and 7-day forecast for the farmer's location\n"
-        "3. MARKET: Current commodity prices and 30-day trends\n"
-        "4. FARM CONTEXT: Farm grid data (which crop is where, cycle/growth stage of each crop, parcel neighbors), crop plan, and historical indicators from Google Sheets\n\n"
+        "You receive structured data from 3 sources and synthesize them into a single, actionable recommendation.\n\n"
+        "Your 3 input signals:\n"
+        "1. WEATHER: Current conditions and 7-day forecast for the farmer's location\n"
+        "2. MARKET: Current commodity prices and 30-day trends\n"
+        "3. FARM CONTEXT: Farm grid data (which crop is where, cycle/growth stage of each crop, parcel neighbors), crop plan, and historical indicators from Google Sheets\n\n"
         "CRITICAL — GROUNDING RULES (never violate):\n"
         "- The USER QUESTION is always included at the top of the incoming prompt. Read it first and answer THAT question. Do not answer a different question you would rather answer.\n"
+        "- Respond in the SAME LANGUAGE as the USER QUESTION (Spanish, Portuguese, English, or any other). Default to Spanish only when the language is ambiguous, since most LATAM smallholders speak Spanish.\n"
         "- The FARM CONTEXT block lists the ONLY parcels and crops that exist on this farm. Never mention parcel IDs (e.g. 'A1', 'B2') or crops that are not in that list. If the requested crop is not planted anywhere on the farm, say so plainly.\n"
-        "- If the data needed to answer is missing, say 'I do not have that data yet' — do NOT invent parcels, statuses, dates, or dosages.\n"
-        "- VISION HANDLING: If the VISION signal contains valid JSON with a `human_description` field, USE that description verbatim (or lightly rephrased) as your answer. NEVER refuse or say 'I couldn't identify' when a vision JSON is present; the vision agent already produced a best-guess. If the vision confidence is low (<0.5), acknowledge the uncertainty in your reply (e.g. 'It looks like a young banana plant, though I am not fully certain from the image') — but still give the identification. If the vision `identified_crop` differs from the parcel's declared crop, mention the discrepancy politely.\n\n"
+        "- If the data needed to answer is missing, say 'I do not have that data yet' — do NOT invent parcels, statuses, dates, or dosages.\n\n"
         "Response format — choose ONE based on the user's question:\n"
         "A) DIRECT QUESTION (e.g. 'Is my Cassava ready to harvest?', 'What is the price of maize?', 'How is the weather this week?'):\n"
         "   - Reply in 1-4 short sentences, conversationally, in plain English.\n"
@@ -49,8 +47,7 @@ advisory_agent = Agent(
         "   - Emit the [INDICATORS] JSON block at the very end.\n\n"
         "When generating or updating a crop plan, produce a structured calendar with activities for the full crop cycle (6-12 months) including: "
         "land preparation, planting, fertilization, pest management, harvest windows, and projected income.\n\n"
-        "Always respond in clear, simple English. Avoid technical jargon. The farmer may have limited formal education.\n\n"
-        "If the user completed onboarding and uploaded a photo for a parcel with an unknown crop or cycle (indicated by 'cycle': 'unknown' in the farm context), analyze the image to determine the crop and growth cycle stage. In that case, output a [INDICATORS] JSON block with a 'crop_updates' list: 'crop_updates': [{'parcel': 'A1', 'crop': 'resolved_crop_name', 'cycle': 'resolved_cycle'}] so the dashboard updates the parcel crop and cycle details automatically.\n\n"
+        "Always respond in clear, simple language matching the farmer's question. Avoid technical jargon. The farmer may have limited formal education.\n\n"
         "When (and only when) format B applies OR you have a real update to persist, output a JSON block tagged [INDICATORS] at the end:\n"
         "[INDICATORS]:\n"
         "{\n"

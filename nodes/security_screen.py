@@ -502,8 +502,8 @@ def security_output_validation(ctx, node_input: str) -> str:
         text += w
 
     # ── 2. LOW-CONFIDENCE DIAGNOSIS DISCLAIMER ────────────────────────────────
-    # The Vision Agent and Advisory Agent may report a confidence score for
-    # disease or nutrient deficiency diagnoses.  Scores below 0.7 indicate
+    # The Advisory Agent may report a confidence score for disease or
+    # nutrient-deficiency diagnoses.  Scores below 0.7 indicate
     # the model is uncertain — real-world consequences of a wrong diagnosis
     # (e.g. applying the wrong fungicide) can be severe for a smallholder.
     # We scan for confidence patterns and append a disclaimer if needed.
