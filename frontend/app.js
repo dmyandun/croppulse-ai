@@ -7,10 +7,21 @@
 
 // ─────────────────────────────────────────────────────────────
 // GLOBAL STATE
-// -------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────
+// Persist userId/sessionId in localStorage so returning users keep
+// the same backend session and can retrieve previously generated data.
+function _getOrCreateId(storageKey, prefix) {
+    let val = localStorage.getItem(storageKey);
+    if (!val) {
+        val = prefix + Math.random().toString(36).slice(2, 9);
+        localStorage.setItem(storageKey, val);
+    }
+    return val;
+}
+
 const APP = {
-    userId:         'farmer_' + Math.random().toString(36).slice(2, 9),
-    sessionId:      'session_' + Math.random().toString(36).slice(2, 9),
+    userId:         _getOrCreateId('croppulse_user_id',    'farmer_'),
+    sessionId:      _getOrCreateId('croppulse_session_id', 'session_'),
     profile:        null,   // localStorage farm profile
     indicators:     [],     // [{parcel, crop, status, pending_action, ...}]
     cropPlan:       [],     // [{date, parcel, crop, activity, status}]
@@ -27,7 +38,7 @@ const STORAGE_KEY = 'croppulse_farm_profile';
 
 // ─────────────────────────────────────────────────────────────
 // CROP DEFINITIONS
-// -------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────
 const CROPS = [
     { id:'cacao',    label:'Cacao',    icon:'🍫', bg:'#E1F5EE', tx:'#065f46', color:'#10b981' },
     { id:'banana',   label:'Banana',   icon:'🍌', bg:'#FAEEDA', tx:'#92400e', color:'#f59e0b' },
@@ -69,7 +80,7 @@ const WMO = {
 
 // ─────────────────────────────────────────────────────────────
 // LOCATION DATA (mirrors Python MCP lookup)
-// -------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────
 const LOCATION_DATA = {
     ecuador: {
         'Azuay':['Cuenca','Girón','Santa Isabel','Sigsig','Pucará'],
@@ -199,7 +210,7 @@ const LOCATION_DATA = {
 
 // ─────────────────────────────────────────────────────────────
 // COORD LOOKUP (canton → {lat, lng})
-// -------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────
 const COORDS = {
     'El Carmen':      { lat:-0.2687,  lng:-79.4326 },
     'Quinindé':       { lat: 0.3273,  lng:-79.4666 },
@@ -238,7 +249,7 @@ function coordsFor(canton) {
 // ─────────────────────────────────────────────────────────────
 // SYNTHETIC CROP PLAN  (used when backend is offline)
 // Builds N months of activities from the farm grid
-// -------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────
 function buildCropPlan(profile) {
     const plan = [];
     const today = new Date();
@@ -276,7 +287,28 @@ function buildCropPlan(profile) {
 // -------------------------------------------------------------
 function loadProfile()       { try { const r=localStorage.getItem(STORAGE_KEY); return r?JSON.parse(r):null; } catch{return null;} }
 function saveProfile(p)      { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
-function resetProfile()      { localStorage.removeItem(STORAGE_KEY); }
+function resetProfile()      {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('croppulse_indicators');
+    localStorage.removeItem('croppulse_crop_plan');
+    // Also clear session IDs so the next onboarding creates a fresh backend session
+    localStorage.removeItem('croppulse_user_id');
+    localStorage.removeItem('croppulse_session_id');
+}
+
+// Persist indicators & cropPlan so they survive page reloads
+function saveIndicators(indicators) {
+    try { localStorage.setItem('croppulse_indicators', JSON.stringify(indicators)); } catch {}
+}
+function loadIndicators() {
+    try { const r=localStorage.getItem('croppulse_indicators'); return r?JSON.parse(r):null; } catch{return null;}
+}
+function saveCropPlan(plan) {
+    try { localStorage.setItem('croppulse_crop_plan', JSON.stringify(plan)); } catch {}
+}
+function loadCropPlan() {
+    try { const r=localStorage.getItem('croppulse_crop_plan'); return r?JSON.parse(r):null; } catch{return null;}
+}
 
 // ─────────────────────────────────────────────────────────────
 // ONBOARDING — Step 1: Location
@@ -771,17 +803,29 @@ function launchApp() {
         }
     }
 
-    // Calendar starts empty — activities are only added when the user
-    // explicitly requests a crop plan via the AI assistant.
-    APP.cropPlan = [];
+    // Restore persisted indicators & cropPlan from localStorage
+    const savedIndicators = loadIndicators();
+    const savedCropPlan = loadCropPlan();
 
-    // Build synthetic indicators from profile
-    APP.indicators = (APP.profile.parcels||[]).map(p=>({
-        parcel:        p.id,
-        crop:          p.crop,
-        status:        p.status || 'Healthy',
-        pending_action:'None',
-    }));
+    if (savedCropPlan && savedCropPlan.length) {
+        APP.cropPlan = savedCropPlan;
+    } else {
+        // Calendar starts empty — activities are only added when the user
+        // explicitly requests a crop plan via the AI assistant.
+        APP.cropPlan = [];
+    }
+
+    if (savedIndicators && savedIndicators.length) {
+        APP.indicators = savedIndicators;
+    } else {
+        // Build synthetic indicators from profile
+        APP.indicators = (APP.profile.parcels||[]).map(p=>({
+            parcel:        p.id,
+            crop:          p.crop,
+            status:        p.status || 'Healthy',
+            pending_action:'None',
+        }));
+    }
 
     // Render Farm tab
     renderFarmGrid();
@@ -811,6 +855,13 @@ function launchApp() {
         }
     }).catch(()=>{ document.getElementById('ind-price-sub').textContent='Offline'; });
 
+    // Async: for Sheets users, re-fetch farm data from Google Sheets
+    // so that indicators, crop plan, and parcel statuses written by the
+    // advisory agent on previous sessions are restored.
+    if (APP.profile.sheet_id) {
+        _refetchSheetsData();
+    }
+
     // Deselect handler
     document.getElementById('btn-deselect')?.addEventListener('click', deselectParcel);
 
@@ -823,6 +874,79 @@ function launchApp() {
     document.getElementById('btn-reset-ob')?.addEventListener('click',()=>{
         if(confirm('Reset your farm setup? This will clear all onboarding data.')) { resetProfile(); location.reload(); }
     });
+}
+
+/**
+ * Re-fetch farm data from Google Sheets on boot so that returning users
+ * see indicators, crop plan updates, and parcel status changes written
+ * by the advisory agent during previous sessions.
+ */
+async function _refetchSheetsData() {
+    try {
+        // Send a lightweight /run call that triggers sheets_read_node
+        // and returns the full farm context from the Google Sheet.
+        const res = await fetch('/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(20000),
+            body: JSON.stringify({
+                user_id:    APP.userId,
+                session_id: APP.sessionId,
+                state_delta: buildStateDelta(APP.profile),
+                new_message: { parts: [{ text: 'Reload my farm data from Sheets' }] },
+            }),
+        });
+        if (!res.ok) return;
+        const events = await res.json();
+        if (!Array.isArray(events)) return;
+
+        // Look for the farm_context in the events' state_delta
+        for (const ev of events) {
+            const sd = ev?.actions?.state_delta;
+            if (!sd?.farm_context) continue;
+            const fc = typeof sd.farm_context === 'string'
+                ? JSON.parse(sd.farm_context)
+                : sd.farm_context;
+
+            // Update indicators from Sheet data
+            const sheetIndicators = fc.indicators || [];
+            if (sheetIndicators.length) {
+                APP.indicators = sheetIndicators.map(ind => ({
+                    parcel:        ind.parcel,
+                    crop:          ind.crop || (APP.profile.parcels||[]).find(p=>p.id===ind.parcel)?.crop || '',
+                    status:        ind.health_status || ind.status || 'Healthy',
+                    pending_action: ind.pending_action || 'None',
+                }));
+                saveIndicators(APP.indicators);
+                renderIndicators_farm();
+            }
+
+            // Update crop plan from Sheet data
+            const sheetPlan = fc.crop_plan || [];
+            if (sheetPlan.length) {
+                APP.cropPlan = sheetPlan;
+                saveCropPlan(APP.cropPlan);
+                renderCalendar();
+                renderEventsList();
+            }
+
+            // Update parcel statuses from grid
+            const gridParcels = fc.farm_grid?.parcels || [];
+            if (gridParcels.length && APP.profile.parcels) {
+                for (const gp of gridParcels) {
+                    const local = APP.profile.parcels.find(p => p.id === gp.id);
+                    if (local && gp.status) {
+                        local.status = gp.status;
+                    }
+                }
+                saveProfile(APP.profile);
+                renderFarmGrid();
+            }
+            break;
+        }
+    } catch (e) {
+        console.warn('Sheets re-fetch on boot failed (non-fatal):', e.message);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1599,6 +1723,7 @@ async function sendMessage() {
                         if(existing>=0) APP.indicators[existing]={...APP.indicators[existing],...p};
                         else APP.indicators.push(p);
                     });
+                    saveIndicators(APP.indicators);
                     renderIndicators_farm();
                 }
                 if(inds.weather) { APP.weather=inds.weather; updateWeatherIndicator(); }
@@ -1644,6 +1769,7 @@ async function sendMessage() {
             yesBtn.addEventListener('click', () => {
                 planActivities.forEach(a => APP.cropPlan.push(a));
                 APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
+                saveCropPlan(APP.cropPlan);
                 renderCalendar();
                 renderEventsList();
                 confirmBox.innerHTML = '<span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>Activities saved to your calendar!</span>';
@@ -1804,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const savedSha = localStorage.getItem('croppulse_commit_sha');
             if (savedSha && savedSha !== currentSha) {
                 console.log("New build detected (" + currentSha + "), resetting onboarding...");
-                localStorage.removeItem('croppulse_farm_profile');
+                resetProfile();  // clears profile, indicators, cropPlan, and session IDs
                 localStorage.setItem('croppulse_commit_sha', currentSha);
                 window.location.reload();
                 return;
