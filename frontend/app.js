@@ -1862,7 +1862,14 @@ async function sendMessage() {
         removeTypingIndicator();
         const msgEl=addMessage('agent', response);
 
-        // Extract [INDICATORS] and silently update dashboard
+        // Extract [INDICATORS] and silently update dashboard. This is the
+        // single source of truth: the backend's sheets_write_node reads the
+        // same block and writes to the Google Sheet, so mirroring these
+        // updates client-side keeps calendar/dashboard/Sheet in lockstep
+        // without any user click. Previously the calendar relied on a
+        // separate "Save X activities?" confirm — fragile and redundant.
+        let planActivitiesAdded = 0;
+        let planActivitiesRejected = 0;
         const indMatch=response.match(/\[INDICATORS\]\s*(\{[\s\S]+?\})/);
         if(indMatch) {
             try {
@@ -1901,56 +1908,68 @@ async function sendMessage() {
                     renderFarmGrid();
                 }
                 if(inds.price&&inds.crop) { APP.prices[inds.crop]=inds; updatePriceIndicator(inds.crop); }
-            } catch {}
+
+                // crop_plan_updates: auto-merge into the calendar. Deduplicate
+                // against APP.cropPlan by (date|parcel|activity) so repeated
+                // plan asks don't create duplicates. Each row is validated
+                // with the same _validateActivity helper used by the prose
+                // fallback — bad rows are counted for the summary but never
+                // land on the calendar.
+                if (Array.isArray(inds.crop_plan_updates) && inds.crop_plan_updates.length) {
+                    const parcelsById = new Map((APP.profile?.parcels || []).map(p => [p.id, p]));
+                    const dedupKey = a => `${a.date}|${a.parcel}|${a.activity}`;
+                    const existingKeys = new Set((APP.cropPlan || []).map(dedupKey));
+                    inds.crop_plan_updates.forEach(item => {
+                        const clean = _validateActivity(item, parcelsById);
+                        if (!clean) { planActivitiesRejected++; return; }
+                        if (existingKeys.has(dedupKey(clean))) return;
+                        APP.cropPlan.push(clean);
+                        existingKeys.add(dedupKey(clean));
+                        planActivitiesAdded++;
+                    });
+                    if (planActivitiesAdded > 0) {
+                        APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
+                        saveCropPlan(APP.cropPlan);
+                        renderCalendar();
+                        renderEventsList();
+                    }
+                }
+            } catch (e) { console.warn('[INDICATORS] parse failed:', e); }
         }
 
-        // Detect crop plan activities in the response and offer to save
-        const planActivities = parsePlanActivities(response, text);
-        if (planActivities.length > 0) {
-            const confirmRow = document.createElement('div');
-            confirmRow.className = 'chat-msg agent';
-            confirmRow.style.paddingLeft = '42px';
-            const confirmBox = document.createElement('div');
-            confirmBox.className = 'cal-save-confirm';
-            confirmBox.innerHTML = `<span><i class="fa-solid fa-calendar-check" style="color:#10b981;margin-right:0.4rem"></i>Save ${planActivities.length} activities to your calendar?</span>`;
-            const yesBtn = document.createElement('button');
-            yesBtn.className = 'cal-save-btn';
-            yesBtn.textContent = 'Yes, save';
-            yesBtn.addEventListener('click', () => {
-                // Belt-and-suspenders: re-validate each activity before it
-                // touches the persisted calendar. parsePlanActivities already
-                // filters, but any future upstream regression should not be
-                // able to leak a bad row into APP.cropPlan.
-                const parcelsById = new Map((APP.profile?.parcels || []).map(p => [p.id, p]));
-                const finalPass = [];
-                planActivities.forEach(a => {
-                    const clean = _validateActivity(a, parcelsById);
-                    if (clean) finalPass.push(clean);
-                    else console.warn('save-to-calendar: dropped invalid activity at save-time:', a);
+        // Prose fallback: rare — only when the agent produced a plan without
+        // an [INDICATORS] block AND the question looks plan-shaped. Same
+        // auto-merge semantics as the structured path (no confirm).
+        if (planActivitiesAdded === 0) {
+            const proseActivities = parsePlanActivities(response, text);
+            if (proseActivities.length > 0) {
+                const dedupKey = a => `${a.date}|${a.parcel}|${a.activity}`;
+                const existingKeys = new Set((APP.cropPlan || []).map(dedupKey));
+                proseActivities.forEach(a => {
+                    if (existingKeys.has(dedupKey(a))) return;
+                    APP.cropPlan.push(a);
+                    existingKeys.add(dedupKey(a));
+                    planActivitiesAdded++;
                 });
-                if (finalPass.length === 0) {
-                    confirmBox.innerHTML = '<span style="color:#f59e0b"><i class="fa-solid fa-triangle-exclamation" style="margin-right:0.4rem"></i>No activities passed validation — nothing saved.</span>';
-                    return;
+                if (planActivitiesAdded > 0) {
+                    APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
+                    saveCropPlan(APP.cropPlan);
+                    renderCalendar();
+                    renderEventsList();
                 }
-                finalPass.forEach(a => APP.cropPlan.push(a));
-                APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
-                saveCropPlan(APP.cropPlan);
-                renderCalendar();
-                renderEventsList();
-                confirmBox.innerHTML = `<span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>${finalPass.length} activities saved to your calendar!</span>`;
-                // Switch to farm tab so user sees the calendar
-                setTimeout(() => switchTab('farm'), 1500);
-            });
-            const noBtn = document.createElement('button');
-            noBtn.className = 'cal-save-btn decline';
-            noBtn.textContent = 'No thanks';
-            noBtn.addEventListener('click', () => {
-                confirmBox.innerHTML = '<span style="color:var(--tx2)"><i class="fa-solid fa-xmark" style="margin-right:0.4rem"></i>Activities not saved.</span>';
-            });
-            confirmBox.appendChild(yesBtn);
-            confirmBox.appendChild(noBtn);
-            confirmRow.appendChild(confirmBox);
-            document.getElementById('chat-messages').appendChild(confirmRow);
+            }
+        }
+
+        // Passive notification when the plan pipeline added anything to the
+        // calendar. Replaces the old "Save X activities?" confirm.
+        if (planActivitiesAdded > 0) {
+            const notifRow = document.createElement('div');
+            notifRow.className = 'chat-msg agent';
+            notifRow.style.paddingLeft = '42px';
+            notifRow.innerHTML = `<div class="cal-save-confirm">
+                <span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>${planActivitiesAdded} activities added to your calendar${planActivitiesRejected ? ` (${planActivitiesRejected} skipped)` : ''}.</span>
+            </div>`;
+            document.getElementById('chat-messages').appendChild(notifRow);
             document.getElementById('chat-messages').scrollTop = 999999;
         }
 

@@ -104,6 +104,54 @@ def dispatch_advisory_signals(ctx: Context, node_input: str) -> str:
     return node_input or "GENERAL_QUESTION"
 
 
+# Language marker word-lists. Small, deliberately conservative — we score
+# occurrences and pick the winner; on a tie or all-zero, we default to English.
+# Kept minimal to avoid false positives on a shared cognate ("plan" matches
+# every language, "de" matches Spanish/Portuguese/French, etc.).
+_LANG_MARKERS = {
+    "Spanish": (
+        " cuál ", " cómo ", " qué ", " dónde ", " cuándo ", " por qué ",
+        " para ", " una ", " los ", " las ", " está ", " muy ",
+        " dame ", " haz ", " sembrar ", " cosecha ", " lluvia ",
+        " precio ", " ¿", " año ", " semana ",
+    ),
+    "Portuguese": (
+        " qual ", " como ", " onde ", " quando ", " por que ", " porque ",
+        " está ", " muito ", " não ", " obrigado ", " obrigada ",
+        " chuva ", " colheita ", " plantar ", " preço ", " ano ", " semana ",
+    ),
+    "English": (
+        " what ", " how ", " when ", " where ", " why ", " please ",
+        " the ", " should ", " would ", " could ", " will ", " next ",
+        " rain ", " harvest ", " plant ", " price ", " week ", " month ",
+        " for ", " of ", " to ",
+    ),
+}
+
+
+def _detect_language(text: str) -> str:
+    """Rough language detection for user chat input.
+
+    Scores the message against a per-language marker word-list and returns the
+    winner. Defaults to English on ties or empty input — English is the safer
+    fallback for this app (English-first UI, hackathon judging in English),
+    and Spanish still wins whenever the message is actually Spanish.
+    """
+    if not text:
+        return "English"
+    # Pad with spaces so word-boundary markers (which start/end with " ")
+    # can match tokens at line edges.
+    padded = f" {text.lower()} "
+    scores = {
+        lang: sum(padded.count(marker) for marker in markers)
+        for lang, markers in _LANG_MARKERS.items()
+    }
+    winner = max(scores, key=scores.get)
+    if scores[winner] == 0:
+        return "English"
+    return winner
+
+
 def compile_advisory_input(ctx: Context, node_input: str) -> str:
     """Consolidate Weather, Markets, and Sheets inputs into a single prompt for Advisory."""
     # Profile saves don't need the full advisory pipeline — return a simple
@@ -150,7 +198,15 @@ def compile_advisory_input(ctx: Context, node_input: str) -> str:
         pass
     parcel_roster = ", ".join(valid_parcels) if valid_parcels else "none registered"
 
+    # Detect the user's language and pin it at the very top of the compiled
+    # prompt. Gemini reads leading directives most reliably; burying the
+    # language rule inside the 2 k-char system instruction lets the model
+    # drift to Spanish on English inputs (particularly when the FARM CONTEXT
+    # contains Spanish farmer/farm names).
+    detected_lang = _detect_language(user_message)
+
     prompt = (
+        f"RESPOND ENTIRELY IN {detected_lang}. Do not mix languages. This overrides any default in the system instruction.\n\n"
         f"USER QUESTION (answer THIS, verbatim in intent):\n{user_message or '[no user question provided]'}\n\n"
         f"VALID PARCELS ON THIS FARM (the ONLY parcel IDs and crops you may reference): {parcel_roster}\n\n"
         "Input Signals for Cross-Signal Intelligence Fusion:\n\n"
