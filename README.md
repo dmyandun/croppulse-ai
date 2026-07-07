@@ -30,7 +30,7 @@ A **3-agent + 3-node** directed graph that fuses weather, market, and farm signa
 | **Market** | `market_node` → `market_mcp` | Date-seeded deterministic price generator for 8 commodities: spot + 30-day trend. |
 | **Farm context** | `sheets_read_node` → `sheets_mcp` | Google Sheets — Profile, FarmGrid, CropPlan, Indicators, InteractionLog tabs. Falls back to an in-request `state_delta` envelope so onboarded data survives without a Sheet configured. |
 
-All signals are stitched together by `compile_advisory_input` and rendered as farmer-facing prose by the single **Advisory Agent**. `security_screen` runs at the graph boundaries — PII redaction on outgoing text and dangerous-dosage guardrails on any agrochemical recommendation.
+All signals are stitched together by `compile_advisory_input` — which also detects the farmer's language and pins a `RESPOND ENTIRELY IN <lang>` directive at the top of the compiled prompt — and rendered as farmer-facing prose by the single **Advisory Agent**. `security_screen` runs at the graph boundaries — PII redaction on outgoing text and dangerous-dosage guardrails on any agrochemical recommendation.
 
 ---
 
@@ -50,7 +50,10 @@ All signals are stitched together by `compile_advisory_input` and rendered as fa
   - 💧 **Maintenance** — irrigation, fertilization, and maintenance activities for the current month.
   - 🐛 **Harvest & Pest** — harvest timeline and disease prevention schedule based on growth cycles.
 - **Auto-redirect to AI** — clicking any plan button switches to the AI Assistant tab and auto-sends the planning prompt.
-- **Save confirmation** — after the AI responds with recommended activities, a "Save X activities to your calendar?" prompt appears. Activities are added to the calendar **only after user confirmation**.
+- **Calendar ↔ Sheet parity** — the calendar is fed by the same structured `crop_plan_updates` array (inside the `[INDICATORS]` block) that the backend writes to the Google Sheet's CropPlan tab, so both always show the identical activity list. Prose keyword-scraping remains only as a fallback when no structured block exists.
+- **Save confirmation** — after the AI responds with recommended activities, a "Save X activities to your calendar?" prompt appears. Activities are added to the calendar **only after user confirmation**. Entries the mapper skips (no specific date — e.g. "Weekly" — or already on the calendar) are itemized in the dialog instead of disappearing silently.
+- **Duplicate protection** — activities are deduplicated by `(date | parcel | activity)`, so clicking a plan button twice never stacks repeated rows.
+- **Lenient date handling** — date ranges ("2026-07-15 to 2026-07-20") resolve to their start date; the advisory agent is instructed to emit strict ISO `YYYY-MM-DD` dates.
 - **Full activity labels** — saved activities display their full text inside calendar day cells (not just dots), with a coloured left border matching the crop type.
 - **Event list** — below the calendar, a detailed event list shows all activities with date, parcel, crop, and status badges (Scheduled / Pending / Completed / Overdue).
 
@@ -63,7 +66,8 @@ All signals are stitched together by `compile_advisory_input` and rendered as fa
   - 🌾 Harvest readiness check
   - 🌱 Planting / weekly task recommendations
 - **Follow-up pills** — after each response, contextual follow-up buttons chain the user to the next relevant agent signal they haven't asked about yet.
-- **Dashboard sync** — AI responses containing `[INDICATORS]` blocks silently update the farm dashboard indicators, weather display, and market prices in real time.
+- **Language mirroring** — server-side language detection in `workflow.py` scores the farmer's message against per-language marker word-lists and pins a `RESPOND ENTIRELY IN <lang>` directive at the top of the compiled advisory prompt (English default on ambiguity), so a Spanish question always gets a Spanish answer.
+- **Dashboard sync** — the frontend's `extractIndicators()` scans **all** ADK events returned by `/run` (last-to-first, brace-matched JSON) to recover the `[INDICATORS]` block even though the security output node strips it from the final farmer-visible event. Farm indicators, weather display, market prices, and the crop-plan calendar update in real time.
 
 ### 🛡️ Security & Safety
 - **Input validation** — truncation, prompt injection detection, PII redaction on all inputs.
@@ -175,7 +179,7 @@ gcloud run deploy croppulse-ai `
   --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=<your-project>,GOOGLE_CLOUD_LOCATION=global"
 ```
 
-`--timeout=300` matters: plan-generation requests legitimately take 45-90 s end-to-end, and Cloud Run's request timeout otherwise defaults low (a 60 s timeout returns `504` to the plan buttons before the workflow finishes).
+`--timeout=300` matters: plan-generation requests legitimately take 45-90 s end-to-end (fresh session + cold start can push past 60 s), and Cloud Run's request timeout otherwise defaults low (a 60 s timeout returns `504` to the plan buttons before the workflow finishes). The frontend's own `/run` fetch budget is 120 s (`AbortSignal.timeout` in `agentRun()`), so the server cap must comfortably exceed it.
 
 The service uses the default Cloud Run compute service account for both Vertex AI and Google Sheets — no service-account-JSON file needed. If you want Sheets writes, **share your Sheet with the compute SA** shown in the onboarding UI.
 
@@ -207,7 +211,8 @@ croppulse-ai/
 ├── frontend/
 │   ├── index.html           # 3-step onboarding + tabbed dashboard (Farm / AI).
 │   ├── app.js               # State, agentRun envelope, renderFarmGrid, chat, crop modal,
-│   │                        # calendar rendering, parsePlanActivities, save confirmation.
+│   │                        # calendar rendering, extractIndicators (structured plan sync),
+│   │                        # parsePlanActivities fallback, save confirmation.
 │   └── styles.css           # Dark theme, glassmorphism, calendar labels, plan buttons.
 │
 ├── tests/
@@ -263,7 +268,7 @@ To see the app end-to-end without deploying, run it locally (see **Setup** above
 - **Government extension service integration** — direct-line MCPs to INIAP (Ecuador), Agrosavia (Colombia), INIA (Peru) so agent recommendations link to the local, certified guidance.
 - **Satellite imagery** — Sentinel-2 NDVI overlays per parcel, complementing on-the-ground diagnostics.
 - **Offline-first PWA** — the current UI is mostly client-side already; a service worker + cached MCP responses would let the app function during rural connectivity drops.
-- **Native Portuguese / Quechua fluency** — the Advisory Agent already replies in the same language as the farmer's question (Spanish/English/Portuguese), but security-node disclaimers (dosage warnings, low-confidence notices) are still hardcoded in English. Localising those is the remaining piece.
+- **Native Quechua fluency** — server-side language detection already guarantees Spanish/English/Portuguese responses match the farmer's question, but security-node disclaimers (dosage warnings, low-confidence notices) are still hardcoded in English, and marker-word lists for indigenous languages don't exist yet. Localising those is the remaining piece.
 
 ## Observability
 
@@ -271,6 +276,8 @@ Built-in ADK telemetry exports to **Cloud Trace**, **BigQuery**, and **Cloud Log
 
 ## Troubleshooting
 
+- **Plan buttons fail with "Agent HTTP 504".** The Cloud Run service is running with a request timeout below what plan generation needs (45-90 s). Redeploy with `--timeout=300` (see the deploy command above) or run `gcloud run services update croppulse-ai --region=us-central1 --timeout=300`.
+- **Calendar shows fewer activities than the Google Sheet.** Fixed as of the latest build — the calendar now reads the same structured `crop_plan_updates` array the Sheet is written from. If you still see a mismatch, hard-refresh once to pick up the latest `app.js` (cache-bust `?v=13`).
 - **"Google Sheets Active" turns amber after some time.** Open the topbar database status modal. If the Sheet ID is missing, your browser storage was cleared (manual clear, private-window expiry, or a browser storage-quota eviction). Re-run onboarding and paste the Sheet ID again. Note: as of the latest build, backend redeploys **do not** wipe the profile — this was previously the most common cause and has been fixed.
 - **Modal shows outdated text after a deploy.** Hard-refresh (Ctrl+Shift+R) once. `index.html` is now served `no-cache`, so subsequent reloads always pick up the latest UI. If you're still seeing pre-fix text, your browser is holding onto the pre-fix cached HTML — one forced reload is enough to fix it permanently.
 - **Sheets writes silently fall back to `crop_logs.json`.** On Cloud Run, verify the compute service account (shown in the onboarding "Copy SA email" button) has been granted **Editor** access to the target Sheet. Locally, either set `GOOGLE_SHEETS_CREDENTIALS_JSON` in `.env` or complete `gcloud auth application-default login` so ADC picks up your user credentials.
