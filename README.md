@@ -68,7 +68,7 @@ All signals are stitched together by `compile_advisory_input` and rendered as fa
 ### 🛡️ Security & Safety
 - **Input validation** — truncation, prompt injection detection, PII redaction on all inputs.
 - **Output guardrails** — dosage caps on agrochemical recommendations, low-confidence disclaimers, `[INDICATORS]` block stripping from user-visible responses.
-- **Profile persistence** — farm profiles are saved to localStorage and optionally synced to Google Sheets for cross-device access.
+- **Profile persistence** — farm profiles are saved to localStorage (with `sheet_id`, indicators, crop plan, and session IDs) and optionally synced to Google Sheets for cross-device access. Profiles survive backend redeploys — the frontend logs the new build's `commit_sha` for debugging but no longer wipes localStorage on version change.
 
 ### 🚀 Onboarding
 - **3-step setup** — location selection → optional Google Sheets sync → parcel grid designer with crop picker and lifecycle stage.
@@ -122,7 +122,7 @@ flowchart LR
 - **FastAPI** wrapper on ADK's `get_fast_api_app` for the custom `/run`, `/api/market/validate-crop`, and static `/ui` mount.
 - **Cloud Run** deploy (`Dockerfile` + `gcloud run deploy --source .`).
 - **Google Sheets API v4** via `gspread` + **Application Default Credentials** (Cloud Run compute service account).
-- **Frontend**: vanilla JS + HTML5, no framework, served as static files from `frontend/` under `/ui`.
+- **Frontend**: vanilla JS + HTML5, no framework, served as static files from `frontend/` under `/ui`. `index.html` is served with `Cache-Control: no-cache, must-revalidate` (explicit route in `app.py` before the StaticFiles mount) so browsers always revalidate the entrypoint after a deploy; `app.js` / `styles.css` use a `?v=<n>` querystring to cache-bust versioned assets.
 
 ## Setup
 
@@ -260,11 +260,17 @@ To see the app end-to-end without deploying, run it locally (see **Setup** above
 - **Government extension service integration** — direct-line MCPs to INIAP (Ecuador), Agrosavia (Colombia), INIA (Peru) so agent recommendations link to the local, certified guidance.
 - **Satellite imagery** — Sentinel-2 NDVI overlays per parcel, complementing on-the-ground diagnostics.
 - **Offline-first PWA** — the current UI is mostly client-side already; a service worker + cached MCP responses would let the app function during rural connectivity drops.
-- **Native Spanish / Portuguese / Quechua responses** — the model handles it but instructions and disclaimers are still English-first.
+- **Native Portuguese / Quechua fluency** — the Advisory Agent already replies in the same language as the farmer's question (Spanish/English/Portuguese), but security-node disclaimers (dosage warnings, low-confidence notices) are still hardcoded in English. Localising those is the remaining piece.
 
 ## Observability
 
 Built-in ADK telemetry exports to **Cloud Trace**, **BigQuery**, and **Cloud Logging**. Response-time budgets and per-node latency are visible in the Cloud Run revisions dashboard.
+
+## Troubleshooting
+
+- **"Google Sheets Active" turns amber after some time.** Open the topbar database status modal. If the Sheet ID is missing, your browser storage was cleared (manual clear, private-window expiry, or a browser storage-quota eviction). Re-run onboarding and paste the Sheet ID again. Note: as of the latest build, backend redeploys **do not** wipe the profile — this was previously the most common cause and has been fixed.
+- **Modal shows outdated text after a deploy.** Hard-refresh (Ctrl+Shift+R) once. `index.html` is now served `no-cache`, so subsequent reloads always pick up the latest UI. If you're still seeing pre-fix text, your browser is holding onto the pre-fix cached HTML — one forced reload is enough to fix it permanently.
+- **Sheets writes silently fall back to `crop_logs.json`.** On Cloud Run, verify the compute service account (shown in the onboarding "Copy SA email" button) has been granted **Editor** access to the target Sheet. Locally, either set `GOOGLE_SHEETS_CREDENTIALS_JSON` in `.env` or complete `gcloud auth application-default login` so ADC picks up your user credentials.
 
 ## License
 
