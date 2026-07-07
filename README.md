@@ -171,8 +171,11 @@ gcloud run deploy croppulse-ai `
   --region=us-central1 `
   --allow-unauthenticated `
   --memory 1Gi `
+  --timeout=300 `
   --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=<your-project>,GOOGLE_CLOUD_LOCATION=global"
 ```
+
+`--timeout=300` matters: plan-generation requests legitimately take 45-90 s end-to-end, and Cloud Run's request timeout otherwise defaults low (a 60 s timeout returns `504` to the plan buttons before the workflow finishes).
 
 The service uses the default Cloud Run compute service account for both Vertex AI and Google Sheets — no service-account-JSON file needed. If you want Sheets writes, **share your Sheet with the compute SA** shown in the onboarding UI.
 

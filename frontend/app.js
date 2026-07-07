@@ -1761,6 +1761,7 @@ async function sendMessage() {
         // calendar and Sheet stay in sync. Prose-scraping fallback
         // (parsePlanActivities) only when no structured block was emitted.
         let planActivities = [];
+        let skippedUndated = 0, skippedDupes = 0;
         const hasStructuredPlan = Array.isArray(indicators?.crop_plan_updates) &&
             indicators.crop_plan_updates.length > 0;
         if (hasStructuredPlan) {
@@ -1773,11 +1774,11 @@ async function sendMessage() {
                 // 2026-07-20" (use the start date). Skip undated entries
                 // ("Weekly", "Daily") — the calendar needs a concrete date.
                 const dateMatch = String(u.date || '').match(/\d{4}-\d{2}-\d{2}/);
-                if (!dateMatch) return;
+                if (!dateMatch) { skippedUndated++; return; }
                 const date = dateMatch[0];
                 const parcelId = u.parcel || parcels[0]?.id || 'A1';
                 const key = `${date}|${parcelId}|${u.activity.trim()}`;
-                if (existingKeys.has(key)) return; // already on the calendar
+                if (existingKeys.has(key)) { skippedDupes++; return; } // already on the calendar
                 existingKeys.add(key);
                 planActivities.push({
                     date,
@@ -1797,7 +1798,14 @@ async function sendMessage() {
             confirmRow.style.paddingLeft = '42px';
             const confirmBox = document.createElement('div');
             confirmBox.className = 'cal-save-confirm';
-            confirmBox.innerHTML = `<span><i class="fa-solid fa-calendar-check" style="color:#10b981;margin-right:0.4rem"></i>Save ${planActivities.length} activities to your calendar?</span>`;
+            // Account for silently skipped structured entries so the offered
+            // count never looks like a bug when the plan text/Sheet shows more.
+            const skippedParts = [];
+            if (skippedUndated) skippedParts.push(`${skippedUndated} without a specific date`);
+            if (skippedDupes) skippedParts.push(`${skippedDupes} already on your calendar`);
+            const skippedNote = skippedParts.length
+                ? ` <small style="color:var(--tx2)">(${skippedParts.join(', ')} — skipped)</small>` : '';
+            confirmBox.innerHTML = `<span><i class="fa-solid fa-calendar-check" style="color:#10b981;margin-right:0.4rem"></i>Save ${planActivities.length} activities to your calendar?${skippedNote}</span>`;
             const yesBtn = document.createElement('button');
             yesBtn.className = 'cal-save-btn';
             yesBtn.textContent = 'Yes, save';
