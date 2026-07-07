@@ -2010,6 +2010,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const dbOkBtn = document.getElementById('db-config-btn-ok');
 
     dbStatusBtn?.addEventListener('click', () => {
+        // Dynamically populate the modal body based on connection status
+        const body = document.getElementById('db-config-body');
+        const icon = dbModal.querySelector('.fa-database');
+        if (APP.profile && APP.profile.sheet_id) {
+            if (icon) icon.style.color = '#10b981';
+            body.innerHTML = `
+                <p style="font-size:0.9rem;color:#cbd5e1;line-height:1.5;margin-bottom:1rem;">
+                    CropPulse AI is connected to your <strong>Google Sheet</strong> for live cloud sync.
+                </p>
+                <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
+                    <p style="font-size:0.8rem;color:#10b981;margin:0;line-height:1.4;display:flex;align-items:center;gap:0.4rem;">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <strong>Google Sheets Active</strong> — your farm data is synced to the cloud.
+                    </p>
+                    <p style="font-size:0.75rem;color:#94a3b8;margin:0.5rem 0 0;line-height:1.3;word-break:break-all;">
+                        Sheet ID: <code style="background:rgba(255,255,255,.07);padding:.1em .3em;border-radius:3px;">${APP.profile.sheet_id}</code>
+                    </p>
+                </div>`;
+        } else {
+            if (icon) icon.style.color = '#f59e0b';
+            body.innerHTML = `
+                <p style="font-size:0.9rem;color:#cbd5e1;line-height:1.5;margin-bottom:1rem;">
+                    CropPulse AI is currently operating in <strong>Local mode</strong> — your farm data is stored in your browser.
+                </p>
+                <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
+                    <p style="font-size:0.8rem;color:#f59e0b;margin:0;line-height:1.4;">
+                        To enable live cloud sync to your <strong>Google Sheets</strong>, reset your farm setup and select <strong>Google Sheets</strong> during onboarding step 2.
+                    </p>
+                </div>`;
+        }
         dbModal.style.display = 'flex';
     });
 

@@ -417,13 +417,8 @@
             <span style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;"><i class="fa-solid fa-database" style="color:#f59e0b;"></i> Database Status</span>
             <button id="db-config-close" class="ob-modal-close" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#9ca3af;" aria-label="Close">&times;</button>
         </div>
-        <p style="font-size:0.9rem;color:#cbd5e1;line-height:1.5;margin-bottom:1rem;">
-            CropPulse AI is currently operating in <strong>Local JSON Fallback mode</strong> (mocking real-time DB via <code>crop_logs.json</code>).
-        </p>
-        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
-            <p style="font-size:0.8rem;color:#f59e0b;margin:0;line-height:1.4;">
-                To enable live cloud sync to your <strong>Google Sheets</strong>, set the <code>GOOGLE_SHEETS_CREDENTIALS</code> environment variable in your <code>.env</code> file with your Google Cloud Service Account JSON credentials.
-            </p>
+        <div id="db-config-body">
+            <!-- Populated dynamically by app.js based on sheet_id -->
         </div>
         <button id="db-config-btn-ok" class="ob-btn ob-btn-primary ob-btn-full" style="width:100%;">Got it</button>
     </div>
