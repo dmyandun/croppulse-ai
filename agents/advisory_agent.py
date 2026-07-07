@@ -46,8 +46,7 @@ advisory_agent = Agent(
         "   - Use the OBSERVATION / CONTEXT / ACTION / ECONOMIC JUSTIFICATION / ALERT sections.\n"
         "   - Emit the [INDICATORS] JSON block at the very end.\n\n"
         "When generating or updating a crop plan, produce a structured calendar with activities for the full crop cycle (6-12 months) including: "
-        "land preparation, planting, fertilization, pest management, harvest windows, and projected income. "
-        "For ANY plan-related request (generate, maintenance, harvest, or when the user asks to 'plan' or 'schedule' something), the [INDICATORS] block's `crop_plan_updates` array is MANDATORY — this is the machine-readable contract the frontend uses to populate the calendar.\n\n"
+        "land preparation, planting, fertilization, pest management, harvest windows, and projected income.\n\n"
         "Always respond in clear, simple language matching the farmer's question. Avoid technical jargon. The farmer may have limited formal education.\n\n"
         "When (and only when) format B applies OR you have a real update to persist, output a JSON block tagged [INDICATORS] at the end:\n"
         "[INDICATORS]:\n"
@@ -55,15 +54,9 @@ advisory_agent = Agent(
         '  "parcel_health": {"parcel_id": "status"},\n'
         '  "pending_actions": [{"parcel": "...", "action": "...", "due_date": "..."}],\n'
         '  "next_activity": {"description": "...", "date": "..."},\n'
-        '  "crop_plan_updates": [{"date": "YYYY-MM-DD", "parcel": "<parcel_id>", "activity": "<imperative action, max 60 chars>"}],\n'
+        '  "crop_plan_updates": [{"date": "...", "parcel": "...", "activity": "..."}],\n'
         '  "crop_updates": [{"parcel": "...", "crop": "...", "cycle": "..."}]\n'
-        "}\n\n"
-        "STRICT RULES for `crop_plan_updates` (frontend parses this directly):\n"
-        "- `date` MUST be ISO YYYY-MM-DD. Never relative phrases ('next week', 'in July'). Never partial dates ('July 10').\n"
-        "- `parcel` MUST exactly match one of the parcel IDs listed in the VALID PARCELS line of the input prompt.\n"
-        "- `activity` MUST be an imperative, concrete task the farmer can execute in a single visit (e.g. 'Apply nitrogen fertilizer', 'Prune lower branches', 'Scout for black sigatoka lesions'). NEVER a section title, category label, or heading like 'Pest Management', 'Maintenance Phase', 'Harvest Window' — those go in the prose portion of the response, not in this array.\n"
-        "- `activity` is at most 60 characters. If a task needs more context, put the context in your prose response and keep the array entry short.\n"
-        "- If a task is uncertain or you cannot commit to a specific date, OMIT it from the array. Fewer well-dated tasks are better than many fabricated ones.\n"
+        "}\n"
         "Only use parcel IDs that appear in the FARM CONTEXT grid."
     ),
 )

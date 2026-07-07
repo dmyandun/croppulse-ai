@@ -7,7 +7,7 @@
     <meta name="description" content="CropPulse AI gives smallholder farmers cross-signal intelligence: farm-grid context, weather forecasts, and market prices fused into actionable recommendations.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 
@@ -69,15 +69,6 @@
             <div id="ob-location-badge" class="ob-location-badge" style="display:none">
                 <i class="fa-solid fa-map-pin"></i>
                 <span id="ob-location-text"></span>
-            </div>
-
-            <div class="ob-field">
-                <label for="ob-farmer-name" class="ob-label"><i class="fa-solid fa-user"></i> Your name</label>
-                <input id="ob-farmer-name" class="ob-input" type="text" maxlength="60" placeholder="e.g. María López" autocomplete="off" />
-            </div>
-            <div class="ob-field">
-                <label for="ob-farm-name" class="ob-label"><i class="fa-solid fa-tractor"></i> Farm name</label>
-                <input id="ob-farm-name" class="ob-input" type="text" maxlength="60" placeholder="e.g. Finca La Esperanza" autocomplete="off" />
             </div>
 
         </div>
@@ -248,10 +239,6 @@
                 <i class="fa-solid fa-database"></i>
                 <span id="db-status-text">Local DB</span>
             </button>
-            <button id="topbar-reset" class="topbar-reset" aria-label="Reset farm" title="Reset farm setup" style="display:flex;align-items:center;gap:0.35rem;background:rgba(220,38,38,0.12);color:#f87171;border:none;padding:0.35rem 0.65rem;border-radius:0.375rem;font-size:0.8rem;font-weight:600;cursor:pointer;">
-                <i class="fa-solid fa-rotate-left"></i>
-                <span>Reset</span>
-            </button>
         </div>
     </header>
 
@@ -348,13 +335,13 @@
                 <div class="section-header">
                     <h2 class="section-title">Crop Planner</h2>
                     <div class="cal-plan-actions">
-                        <button class="cal-plan-btn" id="cal-plan-full" data-prompt="Generate a comprehensive crop planning schedule for all my parcels considering weather forecasts and market conditions. At the end of your response, emit an [INDICATORS] block whose crop_plan_updates array lists every concrete task. Each item MUST have: date (ISO YYYY-MM-DD, never relative like 'next week'), parcel (one of the parcel IDs from my farm), and activity (an imperative action like 'Apply nitrogen fertilizer' or 'Inspect for black sigatoka', max 60 characters, never a section title or category).">
+                        <button class="cal-plan-btn" id="cal-plan-full" data-prompt="Generate a comprehensive crop planning schedule for all my parcels and recommend activities considering weather forecasts and market conditions. List each activity with a target date.">
                             <i class="fa-solid fa-calendar-plus"></i> Generate Plan
                         </button>
-                        <button class="cal-plan-btn" id="cal-plan-maint" data-prompt="Plan irrigation, fertilization, and maintenance activities for my parcels this month considering current weather conditions. At the end of your response, emit an [INDICATORS] block whose crop_plan_updates array lists every concrete task. Each item MUST have: date (ISO YYYY-MM-DD, never relative), parcel (a real parcel ID from my farm), and activity (an imperative task like 'Water parcel A1' — max 60 characters, never a section title).">
+                        <button class="cal-plan-btn" id="cal-plan-maint" data-prompt="Plan irrigation, fertilization, and maintenance activities for my parcels this month considering current weather conditions. List each activity with a target date.">
                             <i class="fa-solid fa-droplet"></i> Maintenance
                         </button>
-                        <button class="cal-plan-btn" id="cal-plan-harvest" data-prompt="Create a harvest timeline and disease prevention schedule for all my crops based on their growth cycle. At the end of your response, emit an [INDICATORS] block whose crop_plan_updates array lists every concrete task. Each item MUST have: date (ISO YYYY-MM-DD, never relative), parcel (a real parcel ID from my farm), and activity (an imperative task like 'Harvest cassava in parcel B2' or 'Scout for pests' — max 60 characters, never a section title).">
+                        <button class="cal-plan-btn" id="cal-plan-harvest" data-prompt="Create a harvest timeline and disease prevention schedule for all my crops based on their growth cycle. List each activity with a target date.">
                             <i class="fa-solid fa-bug"></i> Harvest & Pest
                         </button>
                     </div>
@@ -437,6 +424,6 @@
     </div>
 </div>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>
