@@ -1708,15 +1708,16 @@ async function sendMessage() {
     const fullMessage=text;
 
     try {
-        const response=await agentRun(fullMessage);
+        const { text: response, indicators }=await agentRun(fullMessage);
         removeTypingIndicator();
         const msgEl=addMessage('agent', response);
 
-        // Extract [INDICATORS] and silently update dashboard
-        const indMatch=response.match(/\[INDICATORS\]\s*(\{[\s\S]+?\})/);
-        if(indMatch) {
+        // [INDICATORS] comes pre-extracted from the full event list (the
+        // security screen strips it from the final farmer-facing text, so
+        // it must be read from the advisory agent's own event).
+        if(indicators) {
             try {
-                const inds=JSON.parse(indMatch[1]);
+                const inds=indicators;
                 if(inds.parcels) {
                     inds.parcels.forEach(p=>{
                         const existing=APP.indicators.findIndex(i=>i.parcel===p.parcel);
@@ -1754,8 +1755,42 @@ async function sendMessage() {
             } catch {}
         }
 
-        // Detect crop plan activities in the response and offer to save
-        const planActivities = parsePlanActivities(response, text);
+        // Detect crop plan activities and offer to save. Primary source:
+        // the structured crop_plan_updates array from [INDICATORS] — the
+        // exact same list the backend writes to the Google Sheet, so the
+        // calendar and Sheet stay in sync. Prose-scraping fallback
+        // (parsePlanActivities) only when no structured block was emitted.
+        let planActivities = [];
+        const hasStructuredPlan = Array.isArray(indicators?.crop_plan_updates) &&
+            indicators.crop_plan_updates.length > 0;
+        if (hasStructuredPlan) {
+            const parcels = APP.profile?.parcels || [];
+            const existingKeys = new Set(
+                APP.cropPlan.map(a => `${a.date}|${a.parcel}|${a.activity}`));
+            indicators.crop_plan_updates.forEach(u => {
+                if (!u || typeof u.activity !== 'string' || !u.activity.trim()) return;
+                // Accept "2026-07-15" but also ranges like "2026-07-15 to
+                // 2026-07-20" (use the start date). Skip undated entries
+                // ("Weekly", "Daily") — the calendar needs a concrete date.
+                const dateMatch = String(u.date || '').match(/\d{4}-\d{2}-\d{2}/);
+                if (!dateMatch) return;
+                const date = dateMatch[0];
+                const parcelId = u.parcel || parcels[0]?.id || 'A1';
+                const key = `${date}|${parcelId}|${u.activity.trim()}`;
+                if (existingKeys.has(key)) return; // already on the calendar
+                existingKeys.add(key);
+                planActivities.push({
+                    date,
+                    parcel: parcelId,
+                    crop: parcels.find(p => p.id === parcelId)?.crop || 'cacao',
+                    activity: u.activity.trim(),
+                    status: 'Scheduled',
+                });
+            });
+        }
+        if (!hasStructuredPlan) {
+            planActivities = parsePlanActivities(response, text);
+        }
         if (planActivities.length > 0) {
             const confirmRow = document.createElement('div');
             confirmRow.className = 'chat-msg agent';
@@ -1883,7 +1918,8 @@ async function agentRun(text) {
         }),
     });
     if(!res.ok) throw new Error(`Agent HTTP ${res.status}`);
-    return extractFinalOutput(await res.json());
+    const events=await res.json();
+    return { text: extractFinalOutput(events), indicators: extractIndicators(events) };
 }
 
 function extractFinalOutput(events) {
@@ -1897,6 +1933,42 @@ function extractFinalOutput(events) {
         if(ev?.output) return typeof ev.output==='object'?JSON.stringify(ev.output,null,2):String(ev.output);
     }
     return 'No response found.';
+}
+
+// Scan ALL events for the [INDICATORS] JSON block. The final event's text
+// has the block stripped by the backend security screen, but the advisory
+// agent's own event (earlier in the list) still carries it intact — the
+// same block the backend uses to write the Google Sheet.
+function extractIndicators(events) {
+    if(!Array.isArray(events)) return null;
+    for(let i=events.length-1;i>=0;i--) {
+        const parts=events[i]?.content?.parts;
+        if(!parts) continue;
+        const text=parts.filter(p=>p.text).map(p=>p.text).join('\n');
+        const tag=text.indexOf('[INDICATORS]');
+        if(tag<0) continue;
+        const start=text.indexOf('{', tag);
+        if(start<0) continue;
+        // Brace-matching: the block is a nested JSON object, so a non-greedy
+        // regex (stops at the first "}") cannot extract it reliably.
+        let depth=0, inStr=false, esc=false;
+        for(let j=start;j<text.length;j++) {
+            const ch=text[j];
+            if(esc) { esc=false; continue; }
+            if(ch==='\\') { if(inStr) esc=true; continue; }
+            if(ch==='"') { inStr=!inStr; continue; }
+            if(inStr) continue;
+            if(ch==='{') depth++;
+            else if(ch==='}') {
+                depth--;
+                if(depth===0) {
+                    try { return JSON.parse(text.slice(start, j+1)); }
+                    catch { break; } // malformed JSON — try earlier events
+                }
+            }
+        }
+    }
+    return null;
 }
 
 // ─────────────────────────────────────────────────────────────
