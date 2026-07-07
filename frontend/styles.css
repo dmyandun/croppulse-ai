@@ -89,6 +89,13 @@ img{max-width:100%;display:block}
 .ob-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
 .ob-select-arrow{position:absolute;right:1rem;top:50%;transform:translateY(-50%);color:var(--tx2);font-size:.8rem;pointer-events:none}
 .ob-select option{background:#111d2b}
+.ob-input{
+    width:100%;appearance:none;-webkit-appearance:none;
+    background:rgba(8,18,30,.7);border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);
+    padding:.85rem 1rem;color:var(--tx1);font-size:1rem;transition:var(--t)
+}
+.ob-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.ob-input::placeholder{color:var(--tx2);opacity:.6}
 .ob-location-badge{display:flex;align-items:center;gap:.6rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:var(--r-sm);padding:.65rem 1rem;font-size:.9rem;color:var(--accent);animation:ob-up .3s ease}
 .ob-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:none;border-radius:var(--r-sm);padding:.9rem 1.5rem;font-size:1rem;font-weight:600;transition:var(--t)}
 .ob-btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 16px var(--accent-glow);width:100%}

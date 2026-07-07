@@ -294,6 +294,8 @@ function resetProfile()      {
     // Also clear session IDs so the next onboarding creates a fresh backend session
     localStorage.removeItem('croppulse_user_id');
     localStorage.removeItem('croppulse_session_id');
+    // Clear the version-check SHA so a reset gives a fully clean slate
+    localStorage.removeItem('croppulse_commit_sha');
 }
 
 // Persist indicators & cropPlan so they survive page reloads
@@ -328,6 +330,8 @@ function initStep1() {
     const nxt = document.getElementById('ob-next-btn');
     const bdg = document.getElementById('ob-location-badge');
     const btx = document.getElementById('ob-location-text');
+    const farmerEl = document.getElementById('ob-farmer-name');
+    const farmEl   = document.getElementById('ob-farm-name');
 
     // Database connection toggles
     const btnLocal = document.getElementById('ob-db-btn-local');
@@ -383,10 +387,11 @@ function initStep1() {
     });
 
     function chk() {
-        const ok = cEl.value && pEl.value && kEl.value;
-        nxt.disabled = !ok;
-        bdg.style.display = ok ? 'flex' : 'none';
-        if (ok) btx.textContent = `${kEl.value}, ${pEl.value}, ${cEl.options[cEl.selectedIndex].text}`;
+        const locOk  = cEl.value && pEl.value && kEl.value;
+        const nameOk = (farmerEl?.value.trim().length || 0) > 0 && (farmEl?.value.trim().length || 0) > 0;
+        nxt.disabled = !(locOk && nameOk);
+        bdg.style.display = locOk ? 'flex' : 'none';
+        if (locOk) btx.textContent = `${kEl.value}, ${pEl.value}, ${cEl.options[cEl.selectedIndex].text}`;
     }
 
     cEl.addEventListener('change', () => {
@@ -409,6 +414,8 @@ function initStep1() {
         chk();
     });
     kEl.addEventListener('change', chk);
+    farmerEl?.addEventListener('input', chk);
+    farmEl?.addEventListener('input', chk);
     nxt.addEventListener('click', () => {
         if (nxt.disabled) return;
         APP.profile = {
@@ -416,6 +423,8 @@ function initStep1() {
             country_label: cEl.options[cEl.selectedIndex].text,
             province:      pEl.value,
             canton:        kEl.value,
+            farmer_name:   farmerEl.value.trim(),
+            farm_name:     farmEl.value.trim(),
             sheet_id:      '',
         };
         goToStep2();
@@ -741,8 +750,12 @@ function buildStateDelta(profile) {
                 canton: profile.canton || 'El Carmen',
                 latitude: coords.lat,
                 longitude: coords.lng,
-                farmer_name: profile.farmer_name || 'Farmer',
-                farm_name: profile.farm_name || 'Farm',
+                // farmer_name and farm_name are now collected as required
+                // fields in onboarding step 1 (see initStep1). Keep a defensive
+                // empty-string fallback for legacy profiles that predate the
+                // required-field enforcement.
+                farmer_name: profile.farmer_name || '',
+                farm_name: profile.farm_name || '',
                 total_hectares: parcels.reduce((s,p) => s + (p.area_ha || 1.0), 0),
             },
             farm_grid: {
@@ -870,10 +883,9 @@ function launchApp() {
     // parcels — it respects the user's chosen column count and flows into a
     // new row automatically.
 
-    // Reset button
-    document.getElementById('btn-reset-ob')?.addEventListener('click',()=>{
-        if(confirm('Reset your farm setup? This will clear all onboarding data.')) { resetProfile(); location.reload(); }
-    });
+    // Legacy #btn-reset-ob element was removed from index.html — the topbar
+    // Reset button (#topbar-reset, wired in the DOMContentLoaded block below)
+    // is now the only reset affordance.
 }
 
 /**
@@ -1453,6 +1465,18 @@ function renderEventsList() {
 function renderContextBar() { /* noop */ }
 
 function renderSuggestions() {
+    // Personalise the greeting title with the farmer's first name, if we
+    // captured it during onboarding. Falls back to the generic greeting for
+    // legacy profiles or when the field is somehow empty.
+    const titleEl = document.querySelector('#ai-greeting .greeting-title');
+    if (titleEl) {
+        const farmerName = (APP.profile?.farmer_name || '').trim();
+        const firstName = farmerName.split(/\s+/)[0];
+        titleEl.textContent = firstName
+            ? `Hola, ${firstName} — how can I help today?`
+            : 'Hi, how can I help today?';
+    }
+
     const container=document.getElementById('ai-suggestions');
     if(!container) return;
     const sugs=buildSuggestions();
@@ -1592,103 +1616,229 @@ function removeTypingIndicator() {
     document.getElementById('typing-indicator')?.remove();
 }
 
-// Parse AI response to detect crop plan activities. Looks for structured
-// activity listings (dates, parcel references, activity names) and builds
-// calendar-compatible objects. Only triggered when the user's question was
-// about planning/scheduling.
+// ─────────────────────────────────────────────────────────────
+// PLAN PARSING
+// -------------------------------------------------------------
+// The Advisory Agent's system instruction asks it to emit a
+// [INDICATORS] block containing a machine-readable
+// `crop_plan_updates: [{date, parcel, activity}, ...]` array
+// whenever the user requests a plan. This function's PRIMARY
+// path is to read that structured array — cheap, unambiguous.
+//
+// If the agent replies in prose only (older sessions, missing
+// contract, or the model ignored the instruction), we fall back
+// to a MUCH tighter prose parser than the previous heuristic:
+//   - Skip markdown headers, ALL-CAPS lines, and template
+//     section labels (OBSERVATION / CONTEXT / ACTION / …).
+//   - Require a real ISO or English-prose date; DO NOT fabricate
+//     dates from `today + N days` — that was the source of the
+//     "wrong date on the calendar" bug.
+//   - Reject anything that looks like a category label.
+//
+// Better to save 3 real activities than 15 fake ones.
+
+const _MONTHS = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+    apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+    aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+// Parse a prose date fragment into an ISO YYYY-MM-DD string, or
+// return null if the fragment is not confidently datable.
+// Accepts: "2026-07-10", "July 10", "July 10, 2026", "10 July",
+// "10 July 2026". Rejects: "next week", "mid-July", "in July".
+function parseProseDate(fragment) {
+    if (!fragment) return null;
+    const s = fragment.trim().toLowerCase();
+
+    // ISO YYYY-MM-DD
+    const iso = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+        const d = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00Z`);
+        return isNaN(d.getTime()) ? null : `${iso[1]}-${iso[2]}-${iso[3]}`;
+    }
+
+    // "July 10" / "July 10, 2026" / "July 10 2026"
+    let m = s.match(/\b([a-z]+)\s+(\d{1,2})(?:,?\s+(\d{4}))?\b/);
+    if (m && _MONTHS[m[1]]) {
+        return _buildIso(_MONTHS[m[1]], parseInt(m[2], 10), m[3]);
+    }
+
+    // "10 July" / "10 July 2026"
+    m = s.match(/\b(\d{1,2})\s+([a-z]+)(?:\s+(\d{4}))?\b/);
+    if (m && _MONTHS[m[2]]) {
+        return _buildIso(_MONTHS[m[2]], parseInt(m[1], 10), m[3]);
+    }
+
+    return null;
+}
+
+// Assemble an ISO date from (month, day, optionalYear). If the
+// year is missing, pick the current year unless that date is
+// already in the past by more than 7 days — in which case roll
+// forward to next year (the farmer meant the upcoming occurrence).
+function _buildIso(month, day, yearStr) {
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+    const year = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
+    const candidate = new Date(Date.UTC(year, month - 1, day));
+    if (isNaN(candidate.getTime())) return null;
+    if (!yearStr) {
+        const today = new Date();
+        const diffDays = (candidate.getTime() - today.getTime()) / 86400000;
+        if (diffDays < -7) {
+            // Past date without an explicit year → assume next year.
+            candidate.setUTCFullYear(year + 1);
+        }
+    }
+    return candidate.toISOString().slice(0, 10);
+}
+
+// A line looks like a header / section title / category label
+// rather than a concrete activity. These MUST be excluded from
+// the calendar.
+function _looksLikeHeader(rawLine) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) return true;
+    // Markdown ATX headings: "# ...", "## ...", "### ..."
+    if (/^#+\s/.test(trimmed)) return true;
+    // Bold-only line: "**Something**"
+    if (/^\*\*[^*]+\*\*[\s:.]*$/.test(trimmed)) return true;
+    // Template section labels the Advisory Agent uses
+    if (/^(observation|context|action|economic\s+justification|alert|section)\b[\s:]*/i.test(trimmed)) return true;
+    // ALL-CAPS heading (allowing punctuation and 1-3 words)
+    if (/^[A-Z][A-Z\s\-:]{2,40}$/.test(trimmed) && !/[a-z]/.test(trimmed)) return true;
+    // Ends with ":" and has no verb-like content (e.g. "Pest Management:")
+    if (/^[A-Z][\w\s\-]+:$/.test(trimmed) && trimmed.length < 40) return true;
+    return false;
+}
+
+// Validate a single crop_plan_updates item (or a prose-derived one)
+// against the shape the calendar expects. Returns a clean object
+// with `crop` filled in from APP.profile, or null if invalid.
+function _validateActivity(item, parcelsById) {
+    if (!item || typeof item !== 'object') return null;
+    const dateStr = typeof item.date === 'string' ? item.date.trim() : '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+    const d = new Date(`${dateStr}T00:00:00Z`);
+    if (isNaN(d.getTime())) return null;
+
+    const parcelId = typeof item.parcel === 'string' ? item.parcel.trim() : '';
+    if (!parcelId || !parcelsById.has(parcelId)) return null;
+
+    const activity = typeof item.activity === 'string' ? item.activity.trim() : '';
+    if (activity.length < 5 || activity.length > 80) return null;
+    if (_looksLikeHeader(activity)) return null;
+
+    return {
+        date: dateStr,
+        parcel: parcelId,
+        crop: parcelsById.get(parcelId).crop || 'unknown',
+        activity: activity.slice(0, 80),
+        status: 'Scheduled',
+    };
+}
+
+// Return true if the user's question is unambiguously requesting
+// a plan/calendar action (not just mentioning "harvest" in a
+// direct question like "when should I harvest?").
+function _isPlanRequest(question) {
+    const q = question.toLowerCase();
+    const planVerb = /\b(plan|schedule|calendar|generate|create|build|draft|list\s+activities)\b/;
+    // Also treat the three plan-buttons' prompts as unambiguous —
+    // they all include "crop_plan_updates" in the contract now.
+    if (q.includes('crop_plan_updates')) return true;
+    return planVerb.test(q);
+}
+
 function parsePlanActivities(response, question) {
-    const qLower = question.toLowerCase();
-    const isPlanRequest = qLower.includes('plan') || qLower.includes('schedule') ||
-        qLower.includes('calendar') || qLower.includes('activit') ||
-        qLower.includes('irrigation') || qLower.includes('fertiliz') ||
-        qLower.includes('maintenance') || qLower.includes('harvest');
-    if (!isPlanRequest) return [];
+    if (!_isPlanRequest(question)) return [];
 
-    const activities = [];
     const parcels = APP.profile?.parcels || [];
-    const today = new Date();
+    const parcelsById = new Map(parcels.map(p => [p.id, p]));
+    if (parcelsById.size === 0) return [];
 
-    // Try to find date + activity patterns in the response
-    // Pattern: dates like "July 10", "2026-07-10", "Week 1", etc.
-    const lines = response.split('\n');
-    const datePatterns = [
-        /(\d{4}-\d{2}-\d{2})/,  // ISO dates
-        /(\w+ \d{1,2}(?:,?\s*\d{4})?)/,  // "July 10" or "July 10, 2026"
-    ];
+    const rejected = [];
 
-    // Activity keywords
+    // ── PRIMARY PATH: read `crop_plan_updates` from [INDICATORS] ──
+    // The [INDICATORS] regex matches the same shape used elsewhere
+    // in this file (see sendMessage handler) for consistency.
+    const indMatch = response.match(/\[INDICATORS\]\s*(\{[\s\S]+?\})/);
+    if (indMatch) {
+        try {
+            const parsed = JSON.parse(indMatch[1]);
+            if (Array.isArray(parsed.crop_plan_updates) && parsed.crop_plan_updates.length > 0) {
+                const validated = [];
+                parsed.crop_plan_updates.forEach(item => {
+                    const clean = _validateActivity(item, parcelsById);
+                    if (clean) validated.push(clean);
+                    else rejected.push(item);
+                });
+                if (rejected.length) {
+                    console.warn('parsePlanActivities: rejected', rejected.length,
+                        'structured crop_plan_updates items (bad date/parcel/activity):', rejected);
+                }
+                if (validated.length > 0) return validated;
+            }
+        } catch (e) {
+            console.warn('parsePlanActivities: could not JSON.parse [INDICATORS] block', e);
+        }
+    }
+
+    // ── FALLBACK: strict prose parsing ──
+    // Only reached when the agent produced no structured array.
+    // We keep this narrow so a bad response yields FEW real
+    // activities rather than MANY fake ones.
     const activityKeywords = ['prun', 'fertil', 'irrigat', 'harvest', 'spray', 'weed',
-        'inspect', 'monitor', 'plant', 'sow', 'mulch', 'pest', 'disease', 'apply',
-        'water', 'compost', 'soil', 'drain', 'de-leaf', 'thin'];
+        'inspect', 'monitor', 'plant', 'sow', 'mulch', 'apply', 'water',
+        'compost', 'drain', 'de-leaf', 'thin', 'scout', 'treat'];
 
-    let foundActivities = [];
-    lines.forEach(line => {
-        const lower = line.toLowerCase();
+    const proseFound = [];
+    const lines = response.split('\n');
+    lines.forEach(rawLine => {
+        if (_looksLikeHeader(rawLine)) return;
+
+        const lower = rawLine.toLowerCase();
         const hasActivity = activityKeywords.some(k => lower.includes(k));
         if (!hasActivity) return;
 
-        // Extract activity name — use the first meaningful phrase
-        let activity = line.replace(/^[\s\-\*\d\.\)]+/, '').trim();
-        // Trim markdown bold
+        // Strip list markers and bold, then require a minimum body length.
+        let activity = rawLine.replace(/^[\s\-\*\d\.\)]+/, '').trim();
         activity = activity.replace(/\*\*/g, '').trim();
-        if (activity.length < 5 || activity.length > 100) return;
+        if (activity.length < 15 || activity.length > 120) return;
+        if (_looksLikeHeader(activity)) return;
 
-        // Try to extract a date
-        let actDate = null;
-        for (const pat of datePatterns) {
-            const m = line.match(pat);
-            if (m) {
-                const parsed = new Date(m[1]);
-                if (!isNaN(parsed.getTime())) {
-                    actDate = parsed;
-                    break;
-                }
-            }
+        const dateStr = parseProseDate(rawLine);
+        if (!dateStr) {
+            // No confidently datable — DO NOT fabricate a date.
+            rejected.push({ line: rawLine, reason: 'no-date' });
+            return;
         }
 
-        // If no date found, spread activities over the next weeks
-        if (!actDate) {
-            actDate = new Date(today);
-            actDate.setDate(actDate.getDate() + foundActivities.length * 5 + 2);
+        // Identify the parcel by explicit ID mention. If none, drop the
+        // activity (assigning to the first parcel produced wrong results).
+        let parcelId = null;
+        for (const p of parcels) {
+            if (rawLine.includes(p.id)) { parcelId = p.id; break; }
+        }
+        if (!parcelId) {
+            rejected.push({ line: rawLine, reason: 'no-parcel' });
+            return;
         }
 
-        // Try to identify which parcel
-        let parcelId = parcels[0]?.id || 'A1';
-        parcels.forEach(p => {
-            if (line.includes(p.id)) parcelId = p.id;
-        });
-
-        foundActivities.push({
-            date: actDate.toISOString().split('T')[0],
-            parcel: parcelId,
-            crop: parcels.find(p => p.id === parcelId)?.crop || 'cacao',
-            activity: activity.substring(0, 60),
-            status: 'Scheduled',
-        });
+        const validated = _validateActivity(
+            { date: dateStr, parcel: parcelId, activity: activity.slice(0, 80) },
+            parcelsById,
+        );
+        if (validated) proseFound.push(validated);
+        else rejected.push({ line: rawLine, reason: 'failed-validation' });
     });
 
-    // If we detected plan-related content but no structured activities,
-    // build some from the parcels and response keywords
-    if (foundActivities.length === 0 && isPlanRequest && response.length > 200) {
-        const commonActs = ['Soil preparation', 'Fertilization', 'Irrigation check',
-            'Pest monitoring', 'Pruning', 'Harvest assessment'];
-        parcels.forEach(p => {
-            if (!p.crop || p.crop === 'empty') return;
-            commonActs.slice(0, 3).forEach((act, i) => {
-                const d = new Date(today);
-                d.setDate(d.getDate() + i * 7 + 3);
-                foundActivities.push({
-                    date: d.toISOString().split('T')[0],
-                    parcel: p.id,
-                    crop: p.crop,
-                    activity: act,
-                    status: 'Scheduled',
-                });
-            });
-        });
+    if (rejected.length) {
+        console.warn('parsePlanActivities: rejected', rejected.length,
+            'prose lines (no date / no parcel / looked like header):', rejected);
     }
-
-    return foundActivities;
+    return proseFound;
 }
 
 async function sendMessage() {
@@ -1767,12 +1917,27 @@ async function sendMessage() {
             yesBtn.className = 'cal-save-btn';
             yesBtn.textContent = 'Yes, save';
             yesBtn.addEventListener('click', () => {
-                planActivities.forEach(a => APP.cropPlan.push(a));
+                // Belt-and-suspenders: re-validate each activity before it
+                // touches the persisted calendar. parsePlanActivities already
+                // filters, but any future upstream regression should not be
+                // able to leak a bad row into APP.cropPlan.
+                const parcelsById = new Map((APP.profile?.parcels || []).map(p => [p.id, p]));
+                const finalPass = [];
+                planActivities.forEach(a => {
+                    const clean = _validateActivity(a, parcelsById);
+                    if (clean) finalPass.push(clean);
+                    else console.warn('save-to-calendar: dropped invalid activity at save-time:', a);
+                });
+                if (finalPass.length === 0) {
+                    confirmBox.innerHTML = '<span style="color:#f59e0b"><i class="fa-solid fa-triangle-exclamation" style="margin-right:0.4rem"></i>No activities passed validation — nothing saved.</span>';
+                    return;
+                }
+                finalPass.forEach(a => APP.cropPlan.push(a));
                 APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
                 saveCropPlan(APP.cropPlan);
                 renderCalendar();
                 renderEventsList();
-                confirmBox.innerHTML = '<span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>Activities saved to your calendar!</span>';
+                confirmBox.innerHTML = `<span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>${finalPass.length} activities saved to your calendar!</span>`;
                 // Switch to farm tab so user sees the calendar
                 setTimeout(() => switchTab('farm'), 1500);
             });
@@ -2057,5 +2222,20 @@ document.addEventListener('DOMContentLoaded', () => {
     dbOkBtn?.addEventListener('click', closeDbModal);
     dbModal?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeDbModal();
+    });
+
+    // ── Reset Farm topbar button ────────────────────────────
+    // Client-side reset only — the Google Sheet (if configured) is not
+    // touched. If the user re-onboards with the same sheet_id, they will
+    // overwrite existing rows. Server-side sheet cleanup is out of scope.
+    document.getElementById('topbar-reset')?.addEventListener('click', () => {
+        const confirmed = confirm(
+            'Reset your farm setup?\n\n' +
+            'This clears your profile, calendar, and indicators from this browser. ' +
+            'Your Google Sheet (if configured) is not touched.'
+        );
+        if (!confirmed) return;
+        resetProfile();
+        location.reload();
     });
 });
