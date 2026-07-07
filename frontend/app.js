@@ -897,10 +897,16 @@ async function _refetchSheetsData() {
     try {
         // Send a lightweight /run call that triggers sheets_read_node
         // and returns the full farm context from the Google Sheet.
+        // 90s cap. The boot-time refetch sends a full /run so the workflow
+        // runs end-to-end (router + weather + market + advisory + sheets
+        // write + security). The previous 20s cap was consistently timing
+        // out — that's why the dashboard calendar never picked up Sheet
+        // rows written on prior sessions. Cloud Run's per-request cap is
+        // 300s so 90s stays well within the platform limit.
         const res = await fetch('/run', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(20000),
+            signal: AbortSignal.timeout(90000),
             body: JSON.stringify({
                 user_id:    APP.userId,
                 session_id: APP.sessionId,
@@ -1616,6 +1622,54 @@ function removeTypingIndicator() {
     document.getElementById('typing-indicator')?.remove();
 }
 
+// Robustly extract the JSON object that follows an [INDICATORS] marker.
+//
+// The previous regex `\[INDICATORS\]\s*(\{[\s\S]+?\})` was doubly broken:
+//   1. `\s` doesn't match ':', but the agent typically emits `[INDICATORS]:`
+//      (with a colon), so the regex silently missed the block.
+//   2. Non-greedy `+?` closed at the FIRST inner `}` — for any nested object
+//      or array (which `crop_plan_updates` always is) the captured substring
+//      had unbalanced braces and JSON.parse threw, killing the whole flow.
+//
+// This parser walks the input character-by-character, respecting string
+// literals so `{`/`}` inside quoted values don't miscount the depth. Returns
+// the parsed object, or null if no valid block is found.
+function extractIndicatorsBlock(response) {
+    if (!response || typeof response !== 'string') return null;
+    // Find the marker (case-sensitive to match the agent's output convention).
+    const markerIdx = response.indexOf('[INDICATORS]');
+    if (markerIdx < 0) return null;
+    // Walk forward past the marker + any optional `:` / whitespace to the
+    // opening `{`.
+    let i = markerIdx + '[INDICATORS]'.length;
+    while (i < response.length && response[i] !== '{') i++;
+    if (i >= response.length) return null;
+    // Balanced-brace scan with string-literal awareness.
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let j = i; j < response.length; j++) {
+        const c = response[j];
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === '{') depth++;
+        else if (c === '}') {
+            depth--;
+            if (depth === 0) {
+                const raw = response.slice(i, j + 1);
+                try { return JSON.parse(raw); }
+                catch (e) {
+                    console.warn('extractIndicatorsBlock: matched braces but JSON.parse failed:', e, raw.slice(0, 200));
+                    return null;
+                }
+            }
+        }
+    }
+    return null;
+}
+
 // ─────────────────────────────────────────────────────────────
 // PLAN PARSING
 // -------------------------------------------------------------
@@ -1761,28 +1815,21 @@ function parsePlanActivities(response, question) {
     const rejected = [];
 
     // ── PRIMARY PATH: read `crop_plan_updates` from [INDICATORS] ──
-    // The [INDICATORS] regex matches the same shape used elsewhere
-    // in this file (see sendMessage handler) for consistency.
-    const indMatch = response.match(/\[INDICATORS\]\s*(\{[\s\S]+?\})/);
-    if (indMatch) {
-        try {
-            const parsed = JSON.parse(indMatch[1]);
-            if (Array.isArray(parsed.crop_plan_updates) && parsed.crop_plan_updates.length > 0) {
-                const validated = [];
-                parsed.crop_plan_updates.forEach(item => {
-                    const clean = _validateActivity(item, parcelsById);
-                    if (clean) validated.push(clean);
-                    else rejected.push(item);
-                });
-                if (rejected.length) {
-                    console.warn('parsePlanActivities: rejected', rejected.length,
-                        'structured crop_plan_updates items (bad date/parcel/activity):', rejected);
-                }
-                if (validated.length > 0) return validated;
-            }
-        } catch (e) {
-            console.warn('parsePlanActivities: could not JSON.parse [INDICATORS] block', e);
+    // Uses the balanced-brace extractor so nested arrays/objects don't
+    // truncate the JSON (regex approaches did — see extractIndicatorsBlock).
+    const parsed = extractIndicatorsBlock(response);
+    if (parsed && Array.isArray(parsed.crop_plan_updates) && parsed.crop_plan_updates.length > 0) {
+        const validated = [];
+        parsed.crop_plan_updates.forEach(item => {
+            const clean = _validateActivity(item, parcelsById);
+            if (clean) validated.push(clean);
+            else rejected.push(item);
+        });
+        if (rejected.length) {
+            console.warn('parsePlanActivities: rejected', rejected.length,
+                'structured crop_plan_updates items (bad date/parcel/activity):', rejected);
         }
+        if (validated.length > 0) return validated;
     }
 
     // ── FALLBACK: strict prose parsing ──
@@ -1862,114 +1909,101 @@ async function sendMessage() {
         removeTypingIndicator();
         const msgEl=addMessage('agent', response);
 
-        // Extract [INDICATORS] and silently update dashboard. This is the
-        // single source of truth: the backend's sheets_write_node reads the
-        // same block and writes to the Google Sheet, so mirroring these
-        // updates client-side keeps calendar/dashboard/Sheet in lockstep
-        // without any user click. Previously the calendar relied on a
-        // separate "Save X activities?" confirm — fragile and redundant.
-        let planActivitiesAdded = 0;
-        let planActivitiesRejected = 0;
-        const indMatch=response.match(/\[INDICATORS\]\s*(\{[\s\S]+?\})/);
-        if(indMatch) {
-            try {
-                const inds=JSON.parse(indMatch[1]);
-                if(inds.parcels) {
-                    inds.parcels.forEach(p=>{
-                        const existing=APP.indicators.findIndex(i=>i.parcel===p.parcel);
-                        if(existing>=0) APP.indicators[existing]={...APP.indicators[existing],...p};
-                        else APP.indicators.push(p);
-                    });
-                    saveIndicators(APP.indicators);
-                    renderIndicators_farm();
-                }
-                if(inds.weather) { APP.weather=inds.weather; updateWeatherIndicator(); }
-                if(inds.crop_updates) {
-                    inds.crop_updates.forEach(upd => {
-                        const pIdx = APP.profile.parcels.findIndex(p => p.id === upd.parcel);
-                        if (pIdx >= 0) {
-                            APP.profile.parcels[pIdx].crop = upd.crop;
-                            if (upd.cycle) APP.profile.parcels[pIdx].cycle = upd.cycle;
-                        }
-                        if (APP.profile.grid && APP.profile.grid[upd.parcel]) {
-                            if (typeof APP.profile.grid[upd.parcel] === 'object') {
-                                APP.profile.grid[upd.parcel].crop = upd.crop;
-                                if (upd.cycle) APP.profile.grid[upd.parcel].cycle = upd.cycle;
-                            } else {
-                                APP.profile.grid[upd.parcel] = {
-                                    crop: upd.crop,
-                                    cycle: upd.cycle || 'vegetative',
-                                    photo: null
-                                };
-                            }
-                        }
-                    });
-                    saveProfile(APP.profile);
-                    renderFarmGrid();
-                }
-                if(inds.price&&inds.crop) { APP.prices[inds.crop]=inds; updatePriceIndicator(inds.crop); }
-
-                // crop_plan_updates: auto-merge into the calendar. Deduplicate
-                // against APP.cropPlan by (date|parcel|activity) so repeated
-                // plan asks don't create duplicates. Each row is validated
-                // with the same _validateActivity helper used by the prose
-                // fallback — bad rows are counted for the summary but never
-                // land on the calendar.
-                if (Array.isArray(inds.crop_plan_updates) && inds.crop_plan_updates.length) {
-                    const parcelsById = new Map((APP.profile?.parcels || []).map(p => [p.id, p]));
-                    const dedupKey = a => `${a.date}|${a.parcel}|${a.activity}`;
-                    const existingKeys = new Set((APP.cropPlan || []).map(dedupKey));
-                    inds.crop_plan_updates.forEach(item => {
-                        const clean = _validateActivity(item, parcelsById);
-                        if (!clean) { planActivitiesRejected++; return; }
-                        if (existingKeys.has(dedupKey(clean))) return;
-                        APP.cropPlan.push(clean);
-                        existingKeys.add(dedupKey(clean));
-                        planActivitiesAdded++;
-                    });
-                    if (planActivitiesAdded > 0) {
-                        APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
-                        saveCropPlan(APP.cropPlan);
-                        renderCalendar();
-                        renderEventsList();
-                    }
-                }
-            } catch (e) { console.warn('[INDICATORS] parse failed:', e); }
-        }
-
-        // Prose fallback: rare — only when the agent produced a plan without
-        // an [INDICATORS] block AND the question looks plan-shaped. Same
-        // auto-merge semantics as the structured path (no confirm).
-        if (planActivitiesAdded === 0) {
-            const proseActivities = parsePlanActivities(response, text);
-            if (proseActivities.length > 0) {
-                const dedupKey = a => `${a.date}|${a.parcel}|${a.activity}`;
-                const existingKeys = new Set((APP.cropPlan || []).map(dedupKey));
-                proseActivities.forEach(a => {
-                    if (existingKeys.has(dedupKey(a))) return;
-                    APP.cropPlan.push(a);
-                    existingKeys.add(dedupKey(a));
-                    planActivitiesAdded++;
+        // Extract [INDICATORS] block using the balanced-brace parser.
+        // Silently update dashboard signals (parcels, weather, crop_updates,
+        // price). crop_plan_updates get a user-facing confirmation prompt
+        // rather than being auto-added — users want explicit control over
+        // what lands on their calendar.
+        const inds = extractIndicatorsBlock(response);
+        if (inds) {
+            if(inds.parcels) {
+                inds.parcels.forEach(p=>{
+                    const existing=APP.indicators.findIndex(i=>i.parcel===p.parcel);
+                    if(existing>=0) APP.indicators[existing]={...APP.indicators[existing],...p};
+                    else APP.indicators.push(p);
                 });
-                if (planActivitiesAdded > 0) {
-                    APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
-                    saveCropPlan(APP.cropPlan);
-                    renderCalendar();
-                    renderEventsList();
-                }
+                saveIndicators(APP.indicators);
+                renderIndicators_farm();
             }
+            if(inds.weather) { APP.weather=inds.weather; updateWeatherIndicator(); }
+            if(inds.crop_updates) {
+                inds.crop_updates.forEach(upd => {
+                    const pIdx = APP.profile.parcels.findIndex(p => p.id === upd.parcel);
+                    if (pIdx >= 0) {
+                        APP.profile.parcels[pIdx].crop = upd.crop;
+                        if (upd.cycle) APP.profile.parcels[pIdx].cycle = upd.cycle;
+                    }
+                    if (APP.profile.grid && APP.profile.grid[upd.parcel]) {
+                        if (typeof APP.profile.grid[upd.parcel] === 'object') {
+                            APP.profile.grid[upd.parcel].crop = upd.crop;
+                            if (upd.cycle) APP.profile.grid[upd.parcel].cycle = upd.cycle;
+                        } else {
+                            APP.profile.grid[upd.parcel] = {
+                                crop: upd.crop,
+                                cycle: upd.cycle || 'vegetative',
+                                photo: null
+                            };
+                        }
+                    }
+                });
+                saveProfile(APP.profile);
+                renderFarmGrid();
+            }
+            if(inds.price&&inds.crop) { APP.prices[inds.crop]=inds; updatePriceIndicator(inds.crop); }
         }
 
-        // Passive notification when the plan pipeline added anything to the
-        // calendar. Replaces the old "Save X activities?" confirm.
-        if (planActivitiesAdded > 0) {
-            const notifRow = document.createElement('div');
-            notifRow.className = 'chat-msg agent';
-            notifRow.style.paddingLeft = '42px';
-            notifRow.innerHTML = `<div class="cal-save-confirm">
-                <span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>${planActivitiesAdded} activities added to your calendar${planActivitiesRejected ? ` (${planActivitiesRejected} skipped)` : ''}.</span>
-            </div>`;
-            document.getElementById('chat-messages').appendChild(notifRow);
+        // Detect crop plan activities and ask before saving to the calendar.
+        // Two sources feed this: (1) crop_plan_updates in [INDICATORS], the
+        // machine-readable path; (2) parsePlanActivities prose fallback for
+        // rare cases where the agent replied without [INDICATORS]. Both go
+        // through _validateActivity so bad rows never reach APP.cropPlan.
+        let planActivities = [];
+        if (inds && Array.isArray(inds.crop_plan_updates) && inds.crop_plan_updates.length) {
+            const parcelsById = new Map((APP.profile?.parcels || []).map(p => [p.id, p]));
+            inds.crop_plan_updates.forEach(item => {
+                const clean = _validateActivity(item, parcelsById);
+                if (clean) planActivities.push(clean);
+            });
+        }
+        if (planActivities.length === 0) {
+            planActivities = parsePlanActivities(response, text);
+        }
+
+        // Deduplicate against what's already on the calendar so a repeated
+        // plan ask doesn't offer to re-save the same rows.
+        const dedupKey = a => `${a.date}|${a.parcel}|${a.activity}`;
+        const existingKeys = new Set((APP.cropPlan || []).map(dedupKey));
+        planActivities = planActivities.filter(a => !existingKeys.has(dedupKey(a)));
+
+        if (planActivities.length > 0) {
+            const confirmRow = document.createElement('div');
+            confirmRow.className = 'chat-msg agent';
+            confirmRow.style.paddingLeft = '42px';
+            const confirmBox = document.createElement('div');
+            confirmBox.className = 'cal-save-confirm';
+            confirmBox.innerHTML = `<span><i class="fa-solid fa-calendar-check" style="color:#10b981;margin-right:0.4rem"></i>Add ${planActivities.length} activit${planActivities.length===1?'y':'ies'} to your calendar?</span>`;
+            const yesBtn = document.createElement('button');
+            yesBtn.className = 'cal-save-btn';
+            yesBtn.textContent = 'Yes, add';
+            yesBtn.addEventListener('click', () => {
+                planActivities.forEach(a => APP.cropPlan.push(a));
+                APP.cropPlan.sort((a,b) => a.date.localeCompare(b.date));
+                saveCropPlan(APP.cropPlan);
+                renderCalendar();
+                renderEventsList();
+                confirmBox.innerHTML = `<span style="color:#10b981"><i class="fa-solid fa-circle-check" style="margin-right:0.4rem"></i>${planActivities.length} activities added to your calendar.</span>`;
+                setTimeout(() => switchTab('farm'), 1500);
+            });
+            const noBtn = document.createElement('button');
+            noBtn.className = 'cal-save-btn decline';
+            noBtn.textContent = 'No thanks';
+            noBtn.addEventListener('click', () => {
+                confirmBox.innerHTML = '<span style="color:var(--tx2)"><i class="fa-solid fa-xmark" style="margin-right:0.4rem"></i>Not added.</span>';
+            });
+            confirmBox.appendChild(yesBtn);
+            confirmBox.appendChild(noBtn);
+            confirmRow.appendChild(confirmBox);
+            document.getElementById('chat-messages').appendChild(confirmRow);
             document.getElementById('chat-messages').scrollTop = 999999;
         }
 
