@@ -4,7 +4,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.adk.artifacts import InMemoryArtifactService
@@ -190,6 +190,24 @@ async def legacy_run(request: Request):
 # Mount custom frontend static files
 frontend_path = os.path.join(AGENT_DIR, "frontend")
 if os.path.exists(frontend_path):
+    # Serve index.html with no-cache so the browser always revalidates the
+    # entrypoint. Versioned assets (app.js?v=…, styles.css?v=…) can still be
+    # cached normally by StaticFiles because their querystrings invalidate on
+    # bumps. Without this, browsers keep a stale index.html for days and
+    # continue loading obsolete app.js/styles.css references from before the
+    # last cache-bust, which was the root cause of the "DB modal shows old
+    # 'Local JSON Fallback' text after a deploy" bug.
+    index_path = os.path.join(frontend_path, "index.html")
+    no_cache_headers = {
+        "Cache-Control": "no-cache, must-revalidate",
+        "Pragma": "no-cache",
+    }
+
+    @app.get("/ui/index.html")
+    @app.get("/ui/")
+    async def serve_index():
+        return FileResponse(index_path, headers=no_cache_headers)
+
     app.mount("/ui", StaticFiles(directory=frontend_path, html=True), name="frontend")
 
     @app.get("/")

@@ -1922,18 +1922,21 @@ function escapeHtml(s) {
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── Version Check to Reset Onboarding ────────────────────
+    // ── Version Check (debug-only) ──────────────────────────
+    // We record the current build's commit_sha in localStorage for debugging
+    // (visible in DevTools → Application) but we no longer wipe the profile
+    // on version mismatch. The profile schema is stable across builds and
+    // there is no reason to force a smallholder farmer to re-onboard on every
+    // backend redeploy — that was the root cause of "my Sheet ID disappeared
+    // after a day". Users who genuinely want to reset can use the topbar
+    // Reset button (see the `resetProfile()` call further down in this file).
     fetch('/version')
         .then(res => res.json())
         .then(data => {
             const currentSha = data.commit_sha || 'dev';
             const savedSha = localStorage.getItem('croppulse_commit_sha');
             if (savedSha && savedSha !== currentSha) {
-                console.log("New build detected (" + currentSha + "), resetting onboarding...");
-                resetProfile();  // clears profile, indicators, cropPlan, and session IDs
-                localStorage.setItem('croppulse_commit_sha', currentSha);
-                window.location.reload();
-                return;
+                console.log("New build detected (" + currentSha + "), keeping profile intact.");
             }
             localStorage.setItem('croppulse_commit_sha', currentSha);
             bootApp();
@@ -2037,6 +2040,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:0.75rem;border-radius:0.5rem;margin-bottom:1.25rem;">
                     <p style="font-size:0.8rem;color:#f59e0b;margin:0;line-height:1.4;">
                         To enable live cloud sync to your <strong>Google Sheets</strong>, reset your farm setup and select <strong>Google Sheets</strong> during onboarding step 2.
+                    </p>
+                    <p style="font-size:0.75rem;color:#94a3b8;margin:0.5rem 0 0;line-height:1.3;">
+                        Had a Sheet configured before? Your browser storage may have been cleared — re-run onboarding to reconnect.
                     </p>
                 </div>`;
         }
